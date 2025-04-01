@@ -31,6 +31,10 @@ FESTIVOS = {
     # FESTIVOS AQUI
 }
 
+DIAS_SSANTA = {
+    "2025-04-14", "2025-04-15", "2025-04-16"
+}
+
 bot = Bot(token=BOT_TOKEN)
 
 async def enviar_mensaje_telegram(mensaje):
@@ -57,7 +61,12 @@ def get_fichaje_hours():
     margin = timedelta(minutes=random.randint(-15, 15))
     adjusted_entry_time = (base_entry_time + margin).time()
 
-    work_hours = 7 if (6 <= today.month <= 9 or today.weekday() == 4) else 9
+    today_str = today.strftime("%Y-%m-%d")
+    if today_str in DIAS_SSANTA:
+        work_hours = 7
+    else:
+        work_hours = 7 if (6 <= today.month <= 9 or today.weekday() == 4) else 9
+
     exit_time = (datetime.combine(today, adjusted_entry_time).replace(tzinfo=ZoneInfo("Europe/Madrid")) + timedelta(hours=work_hours)).time()
     
     return {"clock_in": adjusted_entry_time, "clock_out": exit_time}
