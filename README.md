@@ -41,6 +41,7 @@ LATITUDE=
 LONGITUDE=
 BOT_TOKEN=
 CHAT_ID=
+LOGIN_URL=
 ```
 
 ## Dependencias

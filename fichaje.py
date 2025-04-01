@@ -25,7 +25,7 @@ FICHAJE_FILE = "/usr/src/app/data/fichajes.log"
 if not USERNAME or not PASSWORD or not CHAT_ID or not BOT_TOKEN:
     raise ValueError("Faltan variables de entorno necesarias")
 
-LOGIN_URL = "https://cactus.openhr.app/openhr/ini-V1/empdashboard"
+LOGIN_URL = os.getenv("LOGIN_URL")
 
 FESTIVOS = {
     # FESTIVOS AQUI
