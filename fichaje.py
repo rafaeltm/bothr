@@ -193,7 +193,23 @@ async def main():
         # Comprobar si ya se ha fichado hoy (entrada y salida)
         if es_fichaje_realizado_hoy("entrada") and es_fichaje_realizado_hoy("salida"):
             await log_event("Ya se ha fichado entrada y salida hoy. Esperando hasta mañana.")
-            await asyncio.sleep(86400)  # Esperar un día completo
+            # Esperar hasta las 00:00 del día siguiente
+            tomorrow = datetime.now(ZoneInfo("Europe/Madrid")) + timedelta(days=1)
+            tomorrow = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
+
+            while True:
+                now = datetime.now(ZoneInfo("Europe/Madrid"))
+                time_to_wait = (tomorrow - now).total_seconds()
+
+                if time_to_wait <= 0:
+                    break  # Salir del bucle si ya hemos llegado a medianoche
+
+                sleep_time = min(time_to_wait, 300)  # Dormir en bloques de 5 minutos
+                if time_to_wait <= 600:
+                    await log_event(f"Quedan menos de 10 minutos ({time_to_wait:.0f} segundos)")
+
+                await asyncio.sleep(sleep_time)
+            # Reiniciar el ciclo   
             continue
         elif es_fichaje_realizado_hoy("entrada"):
             await log_event("Ya se ha fichado entrada hoy. Esperando hasta la salida.")
