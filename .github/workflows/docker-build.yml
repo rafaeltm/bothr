@@ -6,6 +6,7 @@ on:
       - release  # Solo se ejecuta cuando hay un push a release
     tags:
       - "v*"  # También se ejecuta cuando se crea un tag con el formato "vX.Y.Z"
+  workflow_dispatch:  # Permite ejecutar el flujo de trabajo manualmente desde la interfaz de GitHub
 
 jobs:
   build:
