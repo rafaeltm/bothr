@@ -28,12 +28,7 @@ if not USERNAME or not PASSWORD or not CHAT_ID or not BOT_TOKEN:
 LOGIN_URL = "https://cactus.openhr.app/openhr/ini-V1/empdashboard"
 
 FESTIVOS = {
-    "2025-04-17", "2025-04-18", "2025-04-19", "2025-04-20",
-    "2025-04-21", "2025-04-22", "2025-04-23", "2025-04-24",
-    "2025-04-25", "2025-04-26", "2025-04-27", "2025-04-28",
-    "2025-04-29", "2025-04-30", "2025-05-01", "2025-05-02",
-    "2025-08-14", "2025-08-15", "2025-10-13", "2025-12-05",
-    "2025-12-08"
+    # FESTIVOS AQUI
 }
 
 bot = Bot(token=BOT_TOKEN)
