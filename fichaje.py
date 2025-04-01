@@ -27,13 +27,12 @@ if not USERNAME or not PASSWORD or not CHAT_ID or not BOT_TOKEN:
 
 LOGIN_URL = os.getenv("LOGIN_URL")
 
-FESTIVOS = {
-    # FESTIVOS AQUI
-}
+def cargar_fechas(nombre_archivo):
+    with open(nombre_archivo, "r", encoding="utf-8") as f:
+        return set(json.load(f)["dias" if "jornada" in nombre_archivo else "festivos"])
 
-DIAS_SSANTA = {
-    "2025-04-14", "2025-04-15", "2025-04-16"
-}
+FESTIVOS = cargar_fechas("/usr/src/app/data/festivos.json")
+JORNADA_REDUCIDA = cargar_fechas("/usr/src/app/data/jornada_reducida.json")
 
 bot = Bot(token=BOT_TOKEN)
 
@@ -62,7 +61,7 @@ def get_fichaje_hours():
     adjusted_entry_time = (base_entry_time + margin).time()
 
     today_str = today.strftime("%Y-%m-%d")
-    if today_str in DIAS_SSANTA:
+    if today_str in JORNADA_REDUCIDA:
         work_hours = 7
     else:
         work_hours = 7 if (6 <= today.month <= 9 or today.weekday() == 4) else 9
