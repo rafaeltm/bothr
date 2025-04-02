@@ -16,17 +16,11 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-      - name: Ensure release branch exists
+      - name: Checkout release branch
         run: |
-          if ! git show-ref --verify --quiet refs/heads/release; then
-            git checkout -b release
-            git push origin release
-          else
-            git checkout release
-          fi
+          git checkout release
 
       - name: Merge main into release
         run: |
-          git checkout release
           git merge main
           git push origin release
