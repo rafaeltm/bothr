@@ -1,0 +1,41 @@
+name: Create Release
+
+# Allow the workflow to be triggered manually
+on:
+  workflow_dispatch:
+
+jobs:
+  merge-main-into-releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Merge main into releases
+        run: |
+          git checkout releases
+          git merge main
+          git push origin releases
+
+      - name: Notify with GitHub Comment
+        if: ${{ failure() }}
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.number }}
+          body: |
+            :x: Merge of `main` into `releases` failed.
+            
+      - name: Notify with GitHub Comment
+        if: ${{ success() }}
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.number }}
+          body: |
+            :white_check_mark: Merge of `main` into `releases` was successful.
