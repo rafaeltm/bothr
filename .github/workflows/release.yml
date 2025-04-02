@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  merge-main-into-releases:
+  merge-main-into-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -16,17 +16,17 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-      - name: Ensure releases branch exists
+      - name: Ensure release branch exists
         run: |
-          if ! git show-ref --verify --quiet refs/heads/releases; then
-            git checkout -b releases
-            git push origin releases
+          if ! git show-ref --verify --quiet refs/heads/release; then
+            git checkout -b release
+            git push origin release
           else
-            git checkout releases
+            git checkout release
           fi
 
-      - name: Merge main into releases
+      - name: Merge main into release
         run: |
-          git checkout releases
+          git checkout release
           git merge main
-          git push origin releases
+          git push origin release
