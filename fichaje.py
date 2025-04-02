@@ -21,6 +21,8 @@ def load_env_variable(var_name, required=True, var_type=str):
             value = float(value)
         except ValueError:
             raise ValueError(f"Invalid value for {var_name}, expected a float.")
+    if value and var_type == bool:
+        value = value.lower() in ['true', '1', 'yes']
     return value
 
 USERNAME = load_env_variable("USERNAME")
@@ -31,7 +33,9 @@ ENABLE = load_env_variable("ENABLE", required=False, var_type=bool)
 LATITUDE = load_env_variable("LATITUDE", var_type=float)
 LONGITUDE = load_env_variable("LONGITUDE", var_type=float)
 LOGIN_URL = load_env_variable("LOGIN_URL")
-FICHAJE_FILE = "/usr/src/app/data/fichajes.log"
+FICHAJE_FILE = load_env_variable("FICHAJE_FILE")
+FESTIVOS_FILE = load_env_variable("FESTIVOS_FILE")
+JORNADA_REDUCIDA_FILE = load_env_variable("JORNADA_REDUCIDA_FILE")
 
 bot = Bot(token=BOT_TOKEN)
 
@@ -54,8 +58,8 @@ def cargar_fechas(nombre_archivo):
     with open(nombre_archivo, "r", encoding="utf-8") as f:
         return set(json.load(f)["dias" if "jornada" in nombre_archivo else "festivos"])
 
-FESTIVOS = cargar_fechas("/usr/src/app/data/festivos.json")
-JORNADA_REDUCIDA = cargar_fechas("/usr/src/app/data/jornada_reducida.json")
+FESTIVOS = cargar_fechas(FESTIVOS_FILE)
+JORNADA_REDUCIDA = cargar_fechas(JORNADA_REDUCIDA_FILE)
 
 def es_festivo():
     return datetime.today().strftime("%Y-%m-%d") in FESTIVOS or datetime.today().weekday() >= 5
