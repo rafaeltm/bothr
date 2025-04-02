@@ -11,28 +11,27 @@ from telegram import Bot
 
 load_dotenv()
 
-USERNAME = os.getenv("USERNAME")
-PASSWORD = os.getenv("PASSWORD")
-CHAT_ID = os.getenv("CHAT_ID")  
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-ENABLE = os.getenv("ENABLE") 
+# Validate and load environment variables
+def load_env_variable(var_name, required=True, var_type=str):
+    value = os.getenv(var_name)
+    if required and not value:
+        raise ValueError(f"Missing required environment variable: {var_name}")
+    if value and var_type == float:
+        try:
+            value = float(value)
+        except ValueError:
+            raise ValueError(f"Invalid value for {var_name}, expected a float.")
+    return value
 
-LATITUDE = float(os.getenv("LATITUDE"))
-LONGITUDE = float(os.getenv("LONGITUDE"))
-
+USERNAME = load_env_variable("USERNAME")
+PASSWORD = load_env_variable("PASSWORD")
+CHAT_ID = load_env_variable("CHAT_ID")
+BOT_TOKEN = load_env_variable("BOT_TOKEN")
+ENABLE = load_env_variable("ENABLE", required=False, var_type=bool)
+LATITUDE = load_env_variable("LATITUDE", var_type=float)
+LONGITUDE = load_env_variable("LONGITUDE", var_type=float)
+LOGIN_URL = load_env_variable("LOGIN_URL")
 FICHAJE_FILE = "/usr/src/app/data/fichajes.log"
-
-if not USERNAME or not PASSWORD or not CHAT_ID or not BOT_TOKEN:
-    raise ValueError("Faltan variables de entorno necesarias")
-
-LOGIN_URL = os.getenv("LOGIN_URL")
-
-def cargar_fechas(nombre_archivo):
-    with open(nombre_archivo, "r", encoding="utf-8") as f:
-        return set(json.load(f)["dias" if "jornada" in nombre_archivo else "festivos"])
-
-FESTIVOS = cargar_fechas("/usr/src/app/data/festivos.json")
-JORNADA_REDUCIDA = cargar_fechas("/usr/src/app/data/jornada_reducida.json")
 
 bot = Bot(token=BOT_TOKEN)
 
@@ -42,11 +41,21 @@ async def enviar_mensaje_telegram(mensaje):
     except Exception as e:
         print(f"Error al enviar mensaje por Telegram: {str(e)}")
 
-async def log_event(message):
+async def log_event(message, log_to_file=True):
     timestamp = datetime.now(ZoneInfo("Europe/Madrid")).strftime("%Y-%m-%d %H:%M:%S")
     log_message = f"{timestamp} - {message}"
     print(log_message)
     await enviar_mensaje_telegram(log_message)
+    if log_to_file:
+        with open("general.log", "a") as log_file:
+            log_file.write(log_message + "\n")
+
+def cargar_fechas(nombre_archivo):
+    with open(nombre_archivo, "r", encoding="utf-8") as f:
+        return set(json.load(f)["dias" if "jornada" in nombre_archivo else "festivos"])
+
+FESTIVOS = cargar_fechas("/usr/src/app/data/festivos.json")
+JORNADA_REDUCIDA = cargar_fechas("/usr/src/app/data/jornada_reducida.json")
 
 def es_festivo():
     return datetime.today().strftime("%Y-%m-%d") in FESTIVOS or datetime.today().weekday() >= 5
@@ -72,14 +81,14 @@ def get_fichaje_hours():
 
 async def login(playwright):
     await log_event("Iniciando sesión en la plataforma...")
-    
+
     geolocation = {"latitude": LATITUDE, "longitude": LONGITUDE}
-    permissions = ["geolocation"] 
+    permissions = ["geolocation"]
 
     browser = await playwright.chromium.launch(headless=True)
     context = await browser.new_context(
         geolocation=geolocation,
-        permissions=permissions  
+        permissions=permissions
     )
     page = await context.new_page()
 
@@ -98,7 +107,6 @@ async def login(playwright):
         return None, None
 
 async def fichar(page, tipo="entrada"):
-    # Si ENABLE es false, ejecutamos todo pero no fichamos
     if not ENABLE:
         await log_event(f"Fichaje de {tipo} deshabilitado por configuración.")
         return
@@ -115,11 +123,11 @@ async def fichar(page, tipo="entrada"):
     except TimeoutError:
         error_message = f"Error: Timeout alcanzado al intentar realizar el fichaje de {tipo}."
         await log_event(error_message)
-        await enviar_mensaje_telegram(error_message)  
+        await enviar_mensaje_telegram(error_message)
     except Exception as e:
         error_message = f"Error inesperado al intentar fichar {tipo}: {str(e)}"
         await log_event(error_message)
-        await enviar_mensaje_telegram(error_message)  
+        await enviar_mensaje_telegram(error_message)
 
 async def esperar_hora(fichaje_hora: time):
     now = datetime.now(ZoneInfo("Europe/Madrid"))
@@ -139,20 +147,18 @@ async def esperar_hora(fichaje_hora: time):
 
         await asyncio.sleep(sleep_time)
         time_to_wait -= sleep_time
-    
+
 def read_fichaje_log():
-    # Leer los registros del archivo
     try:
         with open(FICHAJE_FILE, 'r', encoding='utf-8') as f:
             registros = json.load(f)
         return registros
     except FileNotFoundError:
-        return []  # Si el archivo no existe, devolver una lista vacía
+        return []
     except json.JSONDecodeError:
-        return []  # Si el archivo está vacío o tiene un error de formato, devolver una lista vacía
+        return []
 
 def es_fichaje_realizado_hoy(tipo_fichaje):
-    """Verifica si el fichaje de tipo entrada o salida se ha realizado hoy."""
     today = datetime.now().date()
     registros = read_fichaje_log()
     for registro in registros:
@@ -164,20 +170,11 @@ def es_fichaje_realizado_hoy(tipo_fichaje):
     return False
 
 def write_fichaje_log(tipo_fichaje, timestamp):
-    # Crear el registro con tipo de fichaje y timestamp
     registro = {tipo_fichaje: timestamp}
-    
-    # Leer los registros existentes en el archivo (si existen)
-    try:
-        with open(FICHAJE_FILE, 'r', encoding='utf-8') as f:
-            registros = json.load(f)
-    except FileNotFoundError:
-        registros = []
-    
-    # Agregar el nuevo registro
+
+    registros = read_fichaje_log()
     registros.append(registro)
-    
-    # Escribir de nuevo el archivo con los registros actualizados
+
     with open(FICHAJE_FILE, 'w', encoding='utf-8') as f:
         json.dump(registros, f, indent=4)
 
@@ -185,15 +182,12 @@ async def main():
     while True:
         if es_festivo():
             await log_event("Hoy es festivo. No se fichará.")
-            # Si es festivo o fin de semana, esperar hasta el próximo día laborable
             while es_festivo():
                 await asyncio.sleep(3600)
             continue
 
-        # Comprobar si ya se ha fichado hoy (entrada y salida)
         if es_fichaje_realizado_hoy("entrada") and es_fichaje_realizado_hoy("salida"):
             await log_event("Ya se ha fichado entrada y salida hoy. Esperando hasta mañana.")
-            # Esperar hasta las 00:00 del día siguiente
             tomorrow = datetime.now(ZoneInfo("Europe/Madrid")) + timedelta(days=1)
             tomorrow = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -202,14 +196,13 @@ async def main():
                 time_to_wait = (tomorrow - now).total_seconds()
 
                 if time_to_wait <= 0:
-                    break  # Salir del bucle si ya hemos llegado a medianoche
+                    break
 
-                sleep_time = min(time_to_wait, 300)  # Dormir en bloques de 5 minutos
+                sleep_time = min(time_to_wait, 300)
                 if time_to_wait <= 600:
                     await log_event(f"Quedan menos de 10 minutos ({time_to_wait:.0f} segundos)")
 
                 await asyncio.sleep(sleep_time)
-            # Reiniciar el ciclo   
             continue
         elif es_fichaje_realizado_hoy("entrada"):
             await log_event("Ya se ha fichado entrada hoy. Esperando hasta la salida.")
@@ -225,7 +218,6 @@ async def main():
             else:
                 await log_event("No se requiere fichaje de salida hoy.")
         else:
-            # Si no hay fichaje de entrada, proceder a fichar
             fichaje_horas = get_fichaje_hours()
             if fichaje_horas:
                 await esperar_hora(fichaje_horas["clock_in"])
@@ -238,6 +230,6 @@ async def main():
             else:
                 await log_event("No se requiere fichaje de entrada hoy.")
         
-        await asyncio.sleep(3600)  # Esperar una hora antes de la próxima iteración
+        await asyncio.sleep(3600)
 
 asyncio.run(main())
