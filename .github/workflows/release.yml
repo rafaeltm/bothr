@@ -16,26 +16,17 @@ jobs:
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
+      - name: Ensure releases branch exists
+        run: |
+          if ! git show-ref --verify --quiet refs/heads/releases; then
+            git checkout -b releases
+            git push origin releases
+          else
+            git checkout releases
+          fi
+
       - name: Merge main into releases
         run: |
           git checkout releases
           git merge main
           git push origin releases
-
-      - name: Notify with GitHub Comment
-        if: ${{ failure() }}
-        uses: peter-evans/create-or-update-comment@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.number }}
-          body: |
-            :x: Merge of `main` into `releases` failed.
-            
-      - name: Notify with GitHub Comment
-        if: ${{ success() }}
-        uses: peter-evans/create-or-update-comment@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.number }}
-          body: |
-            :white_check_mark: Merge of `main` into `releases` was successful.
