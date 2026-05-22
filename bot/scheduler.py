@@ -199,9 +199,9 @@ def es_festivo(reference: datetime | None = None) -> bool:
 
 def _get_work_hours(reference: datetime) -> int:
     today_str = reference.strftime('%Y-%m-%d')
-    if reference.weekday() == 4 or today_str in config.load_jornada_reducida():
+    if reference.weekday() == 4 or today_str in config.load_jornada_reducida() or 6 <= reference.month <= 9:
         return 7
-    return 7 if 6 <= reference.month <= 9 else 9
+    return 9
 
 
 def get_fichaje_hours(reference: datetime | None = None) -> dict[str, time] | None:

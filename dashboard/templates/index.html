@@ -74,7 +74,7 @@
     return fallbackDone ? 'Completada' : 'Pendiente';
   }
 
-  function formatPlannedStatus(timestamp) {
+  function formatPlannedTime(timestamp) {
     return timestamp || 'No laborable';
   }
 
@@ -98,8 +98,8 @@
       document.getElementById('timeRemaining').textContent = data.time_remaining || '-';
       document.getElementById('todayIn').textContent = formatTodayStatus(data.today_clocked_in_at, data.today_clocked_in);
       document.getElementById('todayOut').textContent = formatTodayStatus(data.today_clocked_out_at, data.today_clocked_out);
-      document.getElementById('plannedIn').textContent = formatPlannedStatus(data.planned_clock_in);
-      document.getElementById('plannedOut').textContent = formatPlannedStatus(data.planned_clock_out);
+      document.getElementById('plannedIn').textContent = formatPlannedTime(data.planned_clock_in);
+      document.getElementById('plannedOut').textContent = formatPlannedTime(data.planned_clock_out);
       document.getElementById('statusBadge').textContent = formatNextAction(data);
     } catch (error) {
       window.showToast('No se pudo actualizar el estado.', true);
