@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h1 class="h3 mb-1">Logs</h1>
+            <p class="text-muted mb-0">Últimas 100 líneas del scheduler.</p>
+          </div>
+          <span class="badge text-bg-dark" id="logsNextAction">{{ status.next_action }}</span>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-4"><div class="status-box"><div class="text-muted small">Próxima acción</div><div class="fs-5 fw-semibold" id="logsStatusAction">{{ status.next_action }}</div></div></div>
+          <div class="col-md-4"><div class="status-box"><div class="text-muted small">Tiempo restante</div><div class="fs-5 fw-semibold" id="logsStatusRemaining">{{ status.time_remaining }}</div></div></div>
+          <div class="col-md-4"><div class="status-box"><div class="text-muted small">Estado de hoy</div><div class="small mt-2">Entrada: <span id="logsStatusIn" class="fw-semibold">{{ 'Completada' if status.today_clocked_in else 'Pendiente' }}</span><br>Salida: <span id="logsStatusOut" class="fw-semibold">{{ 'Completada' if status.today_clocked_out else 'Pendiente' }}</span></div></div></div>
+        </div>
+        <pre class="log-box mb-0" id="logLines">Cargando logs...</pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function refreshLogs() {
+    try {
+      const [logsResponse, statusResponse] = await Promise.all([
+        fetch('/api/logs'),
+        fetch('/api/status')
+      ]);
+      const logsData = await logsResponse.json();
+      const statusData = await statusResponse.json();
+      document.getElementById('logLines').textContent = (logsData.lines || []).join("\n") || 'Sin logs disponibles.';
+      document.getElementById('logsStatusAction').textContent = statusData.next_action || '-';
+      document.getElementById('logsStatusRemaining').textContent = statusData.time_remaining || '-';
+      document.getElementById('logsStatusIn').textContent = statusData.today_clocked_in ? 'Completada' : 'Pendiente';
+      document.getElementById('logsStatusOut').textContent = statusData.today_clocked_out ? 'Completada' : 'Pendiente';
+      document.getElementById('logsNextAction').textContent = statusData.next_action || '-';
+    } catch (error) {
+      window.showToast('No se pudieron cargar los logs.', true);
+    }
+  }
+
+  refreshLogs();
+  setInterval(refreshLogs, 5000);
+</script>
+{% endblock %}

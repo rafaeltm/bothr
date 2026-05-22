@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-xl-10">
+    <div class="card shadow-sm border-0">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h1 class="h3 mb-1">Configuración</h1>
+            <p class="text-muted mb-0">Actualiza las variables de entorno del bot y del dashboard.</p>
+          </div>
+          <button class="btn btn-outline-primary" id="testTelegramBtn" type="button">Test Telegram</button>
+        </div>
+
+        <form id="settingsForm" class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">USERNAME</label>
+            <input class="form-control" name="USERNAME" value="{{ settings.USERNAME }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">PASSWORD</label>
+            <input class="form-control" type="password" name="PASSWORD" value="{{ settings.PASSWORD }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">BOT_TOKEN</label>
+            <input class="form-control" type="password" name="BOT_TOKEN" value="{{ settings.BOT_TOKEN }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">CHAT_ID</label>
+            <input class="form-control" type="password" name="CHAT_ID" value="{{ settings.CHAT_ID }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">LOGIN_URL</label>
+            <input class="form-control" name="LOGIN_URL" value="{{ settings.LOGIN_URL }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">LATITUDE</label>
+            <input class="form-control" name="LATITUDE" value="{{ settings.LATITUDE }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">LONGITUDE</label>
+            <input class="form-control" name="LONGITUDE" value="{{ settings.LONGITUDE }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">FICHAJE_FILE</label>
+            <input class="form-control" name="FICHAJE_FILE" value="{{ settings.FICHAJE_FILE }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">FESTIVOS_FILE</label>
+            <input class="form-control" name="FESTIVOS_FILE" value="{{ settings.FESTIVOS_FILE }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">JORNADA_REDUCIDA_FILE</label>
+            <input class="form-control" name="JORNADA_REDUCIDA_FILE" value="{{ settings.JORNADA_REDUCIDA_FILE }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">DASHBOARD_PASSWORD</label>
+            <input class="form-control" type="password" name="DASHBOARD_PASSWORD" value="{{ settings.DASHBOARD_PASSWORD }}">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">DASHBOARD_PORT</label>
+            <input class="form-control" name="DASHBOARD_PORT" value="{{ settings.DASHBOARD_PORT }}">
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="enableToggle" name="ENABLE" {% if settings.ENABLE %}checked{% endif %}>
+              <label class="form-check-label" for="enableToggle">ENABLE</label>
+            </div>
+          </div>
+          <div class="col-12 text-end">
+            <button class="btn btn-primary" type="submit">Guardar cambios</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const formMask = {{ form_mask|tojson }};
+
+  function serializeForm(form) {
+    const formData = new FormData(form);
+    const payload = {};
+    for (const [key, value] of formData.entries()) {
+      payload[key] = value;
+    }
+    payload.ENABLE = document.getElementById('enableToggle').checked;
+    return payload;
+  }
+
+  document.getElementById('settingsForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serializeForm(event.target))
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo guardar la configuración.');
+      }
+      window.showToast('Configuración guardada correctamente.');
+    } catch (error) {
+      window.showToast(error.message, true);
+    }
+  });
+
+  document.getElementById('testTelegramBtn').addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/test-telegram', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo enviar el mensaje de prueba.');
+      }
+      window.showToast('Mensaje de prueba enviado correctamente.');
+    } catch (error) {
+      window.showToast(error.message, true);
+    }
+  });
+</script>
+{% endblock %}

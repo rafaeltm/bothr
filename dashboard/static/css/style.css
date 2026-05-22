@@ -1,0 +1,75 @@
+body {
+  min-height: 100vh;
+}
+
+.status-box {
+  background: #f8f9fa;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  height: 100%;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.calendar-weekday,
+.calendar-day {
+  border-radius: 0.75rem;
+  padding: 0.9rem;
+  text-align: center;
+}
+
+.calendar-weekday {
+  background: #212529;
+  color: #fff;
+  font-weight: 600;
+}
+
+.calendar-day {
+  min-height: 110px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.calendar-day:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
+}
+
+.calendar-day.is-festivo {
+  background: rgba(220, 53, 69, 0.12);
+  border-color: rgba(220, 53, 69, 0.5);
+}
+
+.calendar-day.is-reducida {
+  background: rgba(255, 193, 7, 0.18);
+  border-color: rgba(255, 193, 7, 0.7);
+}
+
+.calendar-day.is-other-month {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.log-box {
+  min-height: 420px;
+  max-height: 65vh;
+  overflow: auto;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  white-space: pre-wrap;
+}
