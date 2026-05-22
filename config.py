@@ -79,9 +79,15 @@ def _get_int(name: str, default: int) -> int:
         return default
 
 
-def refresh() -> None:
-    """Reload environment-backed module settings from the process env and .env file."""
-    load_dotenv(ENV_FILE, override=True)
+def refresh(force_file_override: bool = False) -> None:
+    """Reload environment-backed module settings.
+
+    By default, keep compatibility with previous behavior where process env values
+    are not overridden by .env values. When `force_file_override=True`, values from
+    ENV_FILE override the process env (used by dashboard runtime updates).
+    """
+    load_dotenv(override=False)
+    load_dotenv(ENV_FILE, override=force_file_override)
 
     globals().update(
         {

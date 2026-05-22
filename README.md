@@ -16,6 +16,15 @@ docker-compose up --build -d
 3. Open the dashboard at `http://localhost:5000`.
 4. Authenticate with username `admin` and the password defined in `DASHBOARD_PASSWORD` (defaults to `admin`).
 
+## Multi-architecture Docker image
+
+The `Build and Push Docker Image` GitHub Actions workflow now publishes a manifest image for:
+
+- `linux/amd64`
+- `linux/arm64`
+
+This allows `docker pull tmrafa/cactushr_bot:latest` to work on both standard x86_64 hosts and ARM64 devices.
+
 ## Environment variables
 
 | Name | Required | Description |

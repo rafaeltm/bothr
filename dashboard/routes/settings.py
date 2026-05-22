@@ -76,7 +76,7 @@ def save_settings():
             current[key] = str(value).strip()
 
     _write_env_file(current)
-    config.refresh()
+    config.refresh(force_file_override=True)
     telegram.refresh_bot()
     return jsonify({'success': True, 'settings': config.get_current_settings(mask_sensitive=True, mask=API_MASK)})
 
