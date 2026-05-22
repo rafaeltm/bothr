@@ -90,9 +90,9 @@ def _to_fichaje_record(line: str) -> dict[str, str] | None:
     lowered = line.lower()
     actions = ACTION_PATTERN.findall(lowered)
     unique_actions = set(actions)
-    if not unique_actions or len(unique_actions) > 1:
+    if len(unique_actions) != 1:
         return None
-    tipo = actions[-1]
+    tipo = next(iter(unique_actions))
 
     match = TIMESTAMP_PATTERN.search(line)
     if not match:
@@ -176,6 +176,7 @@ def get_fichaje_hoy(tipo: str) -> str | None:
             continue
         fecha = parsed.date()
         if fecha == today:
+            # `_parse_timestamp` normalizes all parsed values to `config.TZ`.
             today_timestamps.append(parsed)
     return max(today_timestamps).strftime(DATETIME_FORMAT) if today_timestamps else None
 
