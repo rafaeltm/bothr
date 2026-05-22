@@ -18,6 +18,7 @@ from bot import fichaje, telegram
 LOG_FILE = config.LOGS_DIR / 'general.log'
 MAX_WORKDAY_LOOKAHEAD_DAYS = 366
 logger = logging.getLogger('bothr')
+# Matches "YYYY-MM-DD HH:MM:SS" / "YYYY-MM-DDTHH:MM:SS" with optional fractional seconds and timezone.
 TIMESTAMP_PATTERN = re.compile(r'(?P<timestamp>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)')
 
 
@@ -63,6 +64,7 @@ def _parse_timestamp(timestamp: str) -> datetime | None:
     normalized = timestamp.replace(',', '.')
     if normalized.endswith('Z'):
         normalized = f'{normalized[:-1]}+00:00'
+    # Accept timezone offsets with colon by normalizing +HH:MM -> +HHMM for strict parsers.
     if len(normalized) >= 6 and normalized[-3] == ':' and normalized[-6] in ('+', '-'):
         normalized = f'{normalized[:-3]}{normalized[-2:]}'
     try:
@@ -115,6 +117,7 @@ def read_fichaje_log() -> list[dict[str, str]]:
         for item in data:
             if not isinstance(item, dict):
                 continue
+            normalized_item: dict[str, str] = {}
             for tipo in ('entrada', 'salida'):
                 timestamp = item.get(tipo)
                 if not isinstance(timestamp, str):
@@ -122,7 +125,9 @@ def read_fichaje_log() -> list[dict[str, str]]:
                 parsed = _parse_timestamp(timestamp)
                 if parsed is None:
                     continue
-                normalized.append({tipo: parsed.strftime('%Y-%m-%d %H:%M:%S')})
+                normalized_item[tipo] = parsed.strftime('%Y-%m-%d %H:%M:%S')
+            if normalized_item:
+                normalized.append(normalized_item)
         return normalized
 
     records: list[dict[str, str]] = []
