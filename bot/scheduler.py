@@ -18,13 +18,15 @@ from bot import fichaje, telegram
 LOG_FILE = config.LOGS_DIR / 'general.log'
 MAX_WORKDAY_LOOKAHEAD_DAYS = 366
 logger = logging.getLogger('bothr')
+DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 # Supports timestamps like:
 # - YYYY-MM-DD HH:MM:SS
 # - YYYY-MM-DDTHH:MM:SS
 # - optional fractional seconds (.sss or ,sss)
 # - optional timezone suffix (Z, +HHMM, +HH:MM)
 TIMESTAMP_PATTERN = re.compile(r'(?P<timestamp>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)')
-OFFSET_WITH_COLON_PATTERN = re.compile(r'[+-]\d{2}:\d{2}$')
+OFFSET_WITH_COLON_PATTERN = re.compile(r'(?P<hours>[+-]\d{2}):(?P<minutes>\d{2})$')
+ACTION_PATTERN = re.compile(r'\b(entrada|salida)\b')
 
 
 def _setup_logger() -> None:
@@ -59,7 +61,7 @@ async def log_event(message: str, level: int = logging.INFO) -> None:
 
 
 def _parse_timestamp(timestamp: str) -> datetime | None:
-    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'):
+    for fmt in (DATETIME_FORMAT, '%Y-%m-%dT%H:%M:%S'):
         try:
             parsed = datetime.strptime(timestamp, fmt)
             return parsed.replace(tzinfo=config.TZ)
@@ -70,9 +72,10 @@ def _parse_timestamp(timestamp: str) -> datetime | None:
     if normalized.endswith('Z'):
         normalized = f'{normalized[:-1]}+00:00'
     # Accept timezone offsets with colon by normalizing +HH:MM -> +HHMM for strict parsers.
-    if OFFSET_WITH_COLON_PATTERN.search(normalized):
-        # Remove colon from timezone offset: +05:30 -> +0530.
-        normalized = f'{normalized[:-3]}{normalized[-2:]}'
+    normalized = OFFSET_WITH_COLON_PATTERN.sub(
+        lambda match: f"{match.group('hours')}{match.group('minutes')}",
+        normalized,
+    )
     try:
         parsed = datetime.fromisoformat(normalized)
     except ValueError:
@@ -85,16 +88,11 @@ def _parse_timestamp(timestamp: str) -> datetime | None:
 
 def _to_fichaje_record(line: str) -> dict[str, str] | None:
     lowered = line.lower()
-    has_entrada = re.search(r'\bentrada\b', lowered) is not None
-    has_salida = re.search(r'\bsalida\b', lowered) is not None
-    if has_entrada and has_salida:
+    actions = ACTION_PATTERN.findall(lowered)
+    unique_actions = set(actions)
+    if not unique_actions or len(unique_actions) > 1:
         return None
-    elif has_entrada:
-        tipo = 'entrada'
-    elif has_salida:
-        tipo = 'salida'
-    else:
-        return None
+    tipo = actions[-1]
 
     match = TIMESTAMP_PATTERN.search(line)
     if not match:
@@ -102,7 +100,7 @@ def _to_fichaje_record(line: str) -> dict[str, str] | None:
     parsed = _parse_timestamp(match.group('timestamp'))
     if parsed is None:
         return None
-    return {tipo: parsed.strftime('%Y-%m-%d %H:%M:%S')}
+    return {tipo: parsed.strftime(DATETIME_FORMAT)}
 
 
 def read_fichaje_log() -> list[dict[str, str]]:
@@ -135,7 +133,7 @@ def read_fichaje_log() -> list[dict[str, str]]:
                 parsed = _parse_timestamp(timestamp)
                 if parsed is None:
                     continue
-                normalized_item[tipo] = parsed.strftime('%Y-%m-%d %H:%M:%S')
+                normalized_item[tipo] = parsed.strftime(DATETIME_FORMAT)
             if normalized_item:
                 normalized.append(normalized_item)
         return normalized
@@ -179,7 +177,7 @@ def get_fichaje_hoy(tipo: str) -> str | None:
         fecha = parsed.date()
         if fecha == today:
             today_timestamps.append(parsed)
-    return max(today_timestamps).strftime('%Y-%m-%d %H:%M:%S') if today_timestamps else None
+    return max(today_timestamps).strftime(DATETIME_FORMAT) if today_timestamps else None
 
 
 
