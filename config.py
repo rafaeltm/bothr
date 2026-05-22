@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import time
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -27,6 +28,7 @@ MANAGED_ENV_KEYS = [
     "FICHAJE_FILE",
     "FESTIVOS_FILE",
     "JORNADA_REDUCIDA_FILE",
+    "PREFERRED_CLOCK_IN",
     "DASHBOARD_PASSWORD",
     "DASHBOARD_PORT",
 ]
@@ -43,6 +45,7 @@ LOGIN_URL: str | None = None
 FICHAJE_FILE: Path = DATA_DIR / "fichaje.json"
 FESTIVOS_FILE: Path = DATA_DIR / "festivos.json"
 JORNADA_REDUCIDA_FILE: Path = DATA_DIR / "jornada_reducida.json"
+PREFERRED_CLOCK_IN: time = time(hour=8, minute=0)
 DASHBOARD_PASSWORD: str = "admin"
 DASHBOARD_PORT: int = 5000
 
@@ -79,6 +82,17 @@ def _get_int(name: str, default: int) -> int:
         return default
 
 
+def _get_time(name: str, default: time) -> time:
+    value = os.getenv(name)
+    if value in (None, ""):
+        return default
+    try:
+        parsed = time.fromisoformat(value.strip())
+        return parsed.replace(second=0, microsecond=0)
+    except ValueError:
+        return default
+
+
 def refresh(force_file_override: bool = False) -> None:
     """Reload environment-backed module settings.
 
@@ -109,6 +123,7 @@ def refresh(force_file_override: bool = False) -> None:
                 os.getenv("JORNADA_REDUCIDA_FILE"),
                 "data/jornada_reducida.json",
             ),
+            "PREFERRED_CLOCK_IN": _get_time("PREFERRED_CLOCK_IN", time(hour=8, minute=0)),
             "DASHBOARD_PASSWORD": os.getenv("DASHBOARD_PASSWORD") or "admin",
             "DASHBOARD_PORT": _get_int("DASHBOARD_PORT", 5000),
         }
@@ -155,6 +170,7 @@ def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dic
         'FICHAJE_FILE': str(FICHAJE_FILE),
         'FESTIVOS_FILE': str(FESTIVOS_FILE),
         'JORNADA_REDUCIDA_FILE': str(JORNADA_REDUCIDA_FILE),
+        'PREFERRED_CLOCK_IN': PREFERRED_CLOCK_IN.strftime('%H:%M'),
         'DASHBOARD_PASSWORD': DASHBOARD_PASSWORD or '',
         'DASHBOARD_PORT': DASHBOARD_PORT,
     }

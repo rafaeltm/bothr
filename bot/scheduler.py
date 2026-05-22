@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import random
 import re
 from collections import deque
 from datetime import datetime, time, timedelta
@@ -17,6 +16,8 @@ from bot import fichaje, telegram
 
 LOG_FILE = config.LOGS_DIR / 'general.log'
 MAX_WORKDAY_LOOKAHEAD_DAYS = 366
+REDUCED_WORK_HOURS = 7
+STANDARD_WORK_HOURS = 9
 logger = logging.getLogger('bothr')
 DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 # Supports timestamps like:
@@ -198,6 +199,12 @@ def es_festivo(reference: datetime | None = None) -> bool:
     return now.weekday() >= 5 or today_str in config.load_festivos()
 
 
+def _get_work_hours(reference: datetime) -> int:
+    today_str = reference.strftime('%Y-%m-%d')
+    if reference.weekday() == 4 or today_str in config.load_jornada_reducida() or 6 <= reference.month <= 9:
+        return REDUCED_WORK_HOURS
+    return STANDARD_WORK_HOURS
+
 
 def get_fichaje_hours(reference: datetime | None = None) -> dict[str, time] | None:
     """Calculate stable daily clock-in and clock-out times for working days."""
@@ -205,17 +212,8 @@ def get_fichaje_hours(reference: datetime | None = None) -> dict[str, time] | No
     if now.weekday() >= 5 or now.strftime('%Y-%m-%d') in config.load_festivos():
         return None
 
-    seed = int(now.strftime('%Y%m%d'))
-    margin_minutes = random.Random(seed).randint(-15, 15)
-    base_entry = datetime.combine(now.date(), time(hour=8, minute=0), tzinfo=config.TZ)
-    clock_in_dt = base_entry + timedelta(minutes=margin_minutes)
-
-    today_str = now.strftime('%Y-%m-%d')
-    if today_str in config.load_jornada_reducida():
-        work_hours = 7
-    else:
-        work_hours = 7 if (6 <= now.month <= 9 or now.weekday() == 4) else 9
-
+    clock_in_dt = datetime.combine(now.date(), config.PREFERRED_CLOCK_IN, tzinfo=config.TZ)
+    work_hours = _get_work_hours(now)
     clock_out_dt = clock_in_dt + timedelta(hours=work_hours)
     return {'clock_in': clock_in_dt.time().replace(microsecond=0), 'clock_out': clock_out_dt.time().replace(microsecond=0)}
 
@@ -265,74 +263,65 @@ def get_status_payload() -> dict[str, object]:
     today_clocked_out_at = get_fichaje_hoy('salida')
     today_clocked_in = today_clocked_in_at is not None
     today_clocked_out = today_clocked_out_at is not None
+    base_payload = {
+        'today_clocked_in': today_clocked_in,
+        'today_clocked_out': today_clocked_out,
+        'today_clocked_in_at': today_clocked_in_at,
+        'today_clocked_out_at': today_clocked_out_at,
+        'preferred_clock_in': config.PREFERRED_CLOCK_IN.strftime('%H:%M'),
+        'planned_clock_in': hours['clock_in'].strftime('%H:%M') if hours else None,
+        'planned_clock_out': hours['clock_out'].strftime('%H:%M') if hours else None,
+    }
 
     if es_festivo(now) or hours is None:
         try:
             next_working_entry = _next_working_clock_in(now)
         except RuntimeError:
             return {
+                **base_payload,
                 'next_action': 'ninguna',
                 'next_action_at': None,
                 'time_remaining': 'Sin día laborable configurado',
-                'today_clocked_in': today_clocked_in,
-                'today_clocked_out': today_clocked_out,
-                'today_clocked_in_at': today_clocked_in_at,
-                'today_clocked_out_at': today_clocked_out_at,
             }
         return {
+            **base_payload,
             'next_action': 'entrada',
             'next_action_at': next_working_entry.strftime('%Y-%m-%d %H:%M:%S'),
             'time_remaining': _format_seconds((next_working_entry - now).total_seconds()),
-            'today_clocked_in': today_clocked_in,
-            'today_clocked_out': today_clocked_out,
-            'today_clocked_in_at': today_clocked_in_at,
-            'today_clocked_out_at': today_clocked_out_at,
         }
 
     if not today_clocked_in:
         target = datetime.combine(now.date(), hours['clock_in'], tzinfo=config.TZ)
         return {
+            **base_payload,
             'next_action': 'entrada',
             'next_action_at': target.strftime('%Y-%m-%d %H:%M:%S'),
             'time_remaining': _format_seconds(_seconds_until(hours['clock_in'])),
-            'today_clocked_in': today_clocked_in,
-            'today_clocked_out': today_clocked_out,
-            'today_clocked_in_at': today_clocked_in_at,
-            'today_clocked_out_at': today_clocked_out_at,
         }
 
     if not today_clocked_out:
         target = datetime.combine(now.date(), hours['clock_out'], tzinfo=config.TZ)
         return {
+            **base_payload,
             'next_action': 'salida',
             'next_action_at': target.strftime('%Y-%m-%d %H:%M:%S'),
             'time_remaining': _format_seconds(_seconds_until(hours['clock_out'])),
-            'today_clocked_in': today_clocked_in,
-            'today_clocked_out': today_clocked_out,
-            'today_clocked_in_at': today_clocked_in_at,
-            'today_clocked_out_at': today_clocked_out_at,
         }
 
     try:
         next_working_entry = _next_working_clock_in(now)
     except RuntimeError:
         return {
+            **base_payload,
             'next_action': 'ninguna',
             'next_action_at': None,
             'time_remaining': 'Sin día laborable configurado',
-            'today_clocked_in': today_clocked_in,
-            'today_clocked_out': today_clocked_out,
-            'today_clocked_in_at': today_clocked_in_at,
-            'today_clocked_out_at': today_clocked_out_at,
         }
     return {
+        **base_payload,
         'next_action': 'entrada',
         'next_action_at': next_working_entry.strftime('%Y-%m-%d %H:%M:%S'),
         'time_remaining': _format_seconds((next_working_entry - now).total_seconds()),
-        'today_clocked_in': today_clocked_in,
-        'today_clocked_out': today_clocked_out,
-        'today_clocked_in_at': today_clocked_in_at,
-        'today_clocked_out_at': today_clocked_out_at,
     }
 
 
