@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import random
+import re
 from collections import deque
 from datetime import datetime, time, timedelta
 from logging.handlers import RotatingFileHandler
@@ -17,6 +18,7 @@ from bot import fichaje, telegram
 LOG_FILE = config.LOGS_DIR / 'general.log'
 MAX_WORKDAY_LOOKAHEAD_DAYS = 366
 logger = logging.getLogger('bothr')
+TIMESTAMP_PATTERN = re.compile(r'(?P<timestamp>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)')
 
 
 def _setup_logger() -> None:
@@ -50,14 +52,85 @@ async def log_event(message: str, level: int = logging.INFO) -> None:
 
 
 
+def _parse_timestamp(timestamp: str) -> datetime | None:
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'):
+        try:
+            parsed = datetime.strptime(timestamp, fmt)
+            return parsed.replace(tzinfo=config.TZ)
+        except ValueError:
+            continue
+
+    normalized = timestamp.replace(',', '.')
+    if normalized.endswith('Z'):
+        normalized = f'{normalized[:-1]}+00:00'
+    if len(normalized) >= 6 and normalized[-3] == ':' and normalized[-6] in ('+', '-'):
+        normalized = f'{normalized[:-3]}{normalized[-2:]}'
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=config.TZ)
+    return parsed.astimezone(config.TZ)
+
+
+def _to_fichaje_record(line: str) -> dict[str, str] | None:
+    lowered = line.lower()
+    if 'entrada' in lowered:
+        tipo = 'entrada'
+    elif 'salida' in lowered:
+        tipo = 'salida'
+    else:
+        return None
+
+    match = TIMESTAMP_PATTERN.search(line)
+    if not match:
+        return None
+    parsed = _parse_timestamp(match.group('timestamp'))
+    if parsed is None:
+        return None
+    return {tipo: parsed.strftime('%Y-%m-%d %H:%M:%S')}
+
+
 def read_fichaje_log() -> list[dict[str, str]]:
-    """Return persisted fichaje entries or an empty list on read errors."""
+    """Return persisted fichaje entries from JSON or text logs."""
     try:
         with config.FICHAJE_FILE.open('r', encoding='utf-8') as handle:
-            data = json.load(handle)
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
+            raw_data = handle.read()
+    except (FileNotFoundError, OSError):
         return []
-    return data if isinstance(data, list) else []
+
+    text = raw_data.strip()
+    if not text:
+        return []
+
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        data = None
+
+    if isinstance(data, list):
+        normalized: list[dict[str, str]] = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            for tipo in ('entrada', 'salida'):
+                timestamp = item.get(tipo)
+                if not isinstance(timestamp, str):
+                    continue
+                parsed = _parse_timestamp(timestamp)
+                if parsed is None:
+                    continue
+                normalized.append({tipo: parsed.strftime('%Y-%m-%d %H:%M:%S')})
+        return normalized
+
+    records: list[dict[str, str]] = []
+    for line in text.splitlines():
+        record = _to_fichaje_record(line)
+        if record is not None:
+            records.append(record)
+    return records
 
 
 
@@ -68,10 +141,10 @@ def es_fichaje_realizado_hoy(tipo: str) -> bool:
         timestamp = registro.get(tipo)
         if not timestamp:
             continue
-        try:
-            fecha = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').date()
-        except ValueError:
+        parsed = _parse_timestamp(timestamp)
+        if parsed is None:
             continue
+        fecha = parsed.date()
         if fecha == today:
             return True
     return False
@@ -80,18 +153,18 @@ def es_fichaje_realizado_hoy(tipo: str) -> bool:
 def get_fichaje_hoy(tipo: str) -> str | None:
     """Return latest today's timestamp for `entrada` or `salida`, when available."""
     today = datetime.now(config.TZ).date()
-    today_values: list[str] = []
+    today_values: list[datetime] = []
     for registro in read_fichaje_log():
         timestamp = registro.get(tipo)
         if not timestamp:
             continue
-        try:
-            fecha = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').date()
-        except ValueError:
+        parsed = _parse_timestamp(timestamp)
+        if parsed is None:
             continue
+        fecha = parsed.date()
         if fecha == today:
-            today_values.append(timestamp)
-    return max(today_values) if today_values else None
+            today_values.append(parsed)
+    return max(today_values).strftime('%Y-%m-%d %H:%M:%S') if today_values else None
 
 
 
