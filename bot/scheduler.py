@@ -18,7 +18,11 @@ from bot import fichaje, telegram
 LOG_FILE = config.LOGS_DIR / 'general.log'
 MAX_WORKDAY_LOOKAHEAD_DAYS = 366
 logger = logging.getLogger('bothr')
-# Matches "YYYY-MM-DD HH:MM:SS" / "YYYY-MM-DDTHH:MM:SS" with optional fractional seconds and timezone.
+# Supports timestamps like:
+# - YYYY-MM-DD HH:MM:SS
+# - YYYY-MM-DDTHH:MM:SS
+# - optional fractional seconds (.sss or ,sss)
+# - optional timezone suffix (Z, +HHMM, +HH:MM)
 TIMESTAMP_PATTERN = re.compile(r'(?P<timestamp>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)')
 OFFSET_WITH_COLON_PATTERN = re.compile(r'[+-]\d{2}:\d{2}$')
 
@@ -67,6 +71,7 @@ def _parse_timestamp(timestamp: str) -> datetime | None:
         normalized = f'{normalized[:-1]}+00:00'
     # Accept timezone offsets with colon by normalizing +HH:MM -> +HHMM for strict parsers.
     if OFFSET_WITH_COLON_PATTERN.search(normalized):
+        # Remove colon from timezone offset: +05:30 -> +0530.
         normalized = f'{normalized[:-3]}{normalized[-2:]}'
     try:
         parsed = datetime.fromisoformat(normalized)
@@ -83,7 +88,7 @@ def _to_fichaje_record(line: str) -> dict[str, str] | None:
     has_entrada = re.search(r'\bentrada\b', lowered) is not None
     has_salida = re.search(r'\bsalida\b', lowered) is not None
     if has_entrada and has_salida:
-        tipo = 'entrada' if lowered.rfind('entrada') > lowered.rfind('salida') else 'salida'
+        return None
     elif has_entrada:
         tipo = 'entrada'
     elif has_salida:
