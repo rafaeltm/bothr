@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import time
 
 from flask import Blueprint, jsonify, render_template, request
 
@@ -33,6 +34,19 @@ def _format_env_value(value: str) -> str:
     if needs_quotes:
         return f'"{escaped}"'
     return escaped
+
+
+def _normalize_time_value(value: object) -> str | None:
+    if value is None:
+        return ''
+    normalized = str(value).strip()
+    if normalized == '':
+        return ''
+    try:
+        parsed = time.fromisoformat(normalized)
+    except ValueError:
+        return None
+    return parsed.strftime('%H:%M')
 
 
 
@@ -68,6 +82,12 @@ def save_settings():
             continue
         value = payload[key]
         if key in config.SENSITIVE_ENV_KEYS and value == MASK_VALUE:
+            continue
+        if key == 'PREFERRED_CLOCK_IN':
+            normalized = _normalize_time_value(value)
+            if normalized is None:
+                return jsonify({'success': False, 'error': 'La hora deseada de entrada debe tener formato HH:MM.'}), 400
+            current[key] = normalized
             continue
         if isinstance(value, bool):
             current[key] = 'true' if value else 'false'

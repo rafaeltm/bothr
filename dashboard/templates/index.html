@@ -13,25 +13,45 @@
           <span class="badge text-bg-dark" id="statusBadge">Cargando...</span>
         </div>
         <div class="row g-3">
-          <div class="col-md-4">
+          <div class="col-lg-3 col-md-6">
             <div class="status-box">
               <div class="text-muted small">Próxima acción</div>
               <div class="fs-4 fw-semibold" id="nextAction">-</div>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-lg-3 col-md-6">
             <div class="status-box">
               <div class="text-muted small">Tiempo restante</div>
               <div class="fs-4 fw-semibold" id="timeRemaining">-</div>
             </div>
           </div>
-          <div class="col-md-4">
+          <div class="col-lg-3 col-md-6">
             <div class="status-box">
               <div class="text-muted small">Estado de hoy</div>
               <div class="small mt-2">
                 <div>Entrada: <span id="todayIn" class="fw-semibold">-</span></div>
                 <div>Salida: <span id="todayOut" class="fw-semibold">-</span></div>
               </div>
+            </div>
+          </div>
+          <div class="col-lg-3 col-md-6">
+            <div class="status-box">
+              <div class="text-muted small">Horario previsto</div>
+              <div class="small mt-2">
+                <div>Entrada: <span id="plannedIn" class="fw-semibold">-</span></div>
+                <div>Salida: <span id="plannedOut" class="fw-semibold">-</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="status-box mt-3">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-6">
+              <label class="form-label text-muted small mb-1" for="preferredClockIn">Hora deseada de entrada</label>
+              <input class="form-control" type="time" id="preferredClockIn">
+            </div>
+            <div class="col-md-6 text-md-end">
+              <button class="btn btn-primary" type="button" id="savePreferredClockInBtn">Guardar hora</button>
             </div>
           </div>
         </div>
@@ -54,6 +74,19 @@
     return fallbackDone ? 'Completada' : 'Pendiente';
   }
 
+  function formatPlannedStatus(timestamp) {
+    return timestamp || 'No laborable';
+  }
+
+  async function loadPreferredClockIn() {
+    const response = await fetch('/api/settings');
+    if (!response.ok) {
+      throw new Error('Configuración no disponible');
+    }
+    const data = await response.json();
+    document.getElementById('preferredClockIn').value = data.PREFERRED_CLOCK_IN || '';
+  }
+
   async function refreshStatus() {
     try {
       const response = await fetch('/api/status');
@@ -65,12 +98,35 @@
       document.getElementById('timeRemaining').textContent = data.time_remaining || '-';
       document.getElementById('todayIn').textContent = formatTodayStatus(data.today_clocked_in_at, data.today_clocked_in);
       document.getElementById('todayOut').textContent = formatTodayStatus(data.today_clocked_out_at, data.today_clocked_out);
+      document.getElementById('plannedIn').textContent = formatPlannedStatus(data.planned_clock_in);
+      document.getElementById('plannedOut').textContent = formatPlannedStatus(data.planned_clock_out);
       document.getElementById('statusBadge').textContent = formatNextAction(data);
     } catch (error) {
       window.showToast('No se pudo actualizar el estado.', true);
     }
   }
 
+  document.getElementById('savePreferredClockInBtn').addEventListener('click', async () => {
+    try {
+      const preferredClockIn = document.getElementById('preferredClockIn').value;
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ PREFERRED_CLOCK_IN: preferredClockIn })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo guardar la hora deseada.');
+      }
+      document.getElementById('preferredClockIn').value = data.settings.PREFERRED_CLOCK_IN || preferredClockIn;
+      await refreshStatus();
+      window.showToast('Hora de entrada guardada correctamente.');
+    } catch (error) {
+      window.showToast(error.message, true);
+    }
+  });
+
+  loadPreferredClockIn().catch(() => window.showToast('No se pudo cargar la configuración.', true));
   refreshStatus();
   setInterval(refreshStatus, 30000);
 </script>
