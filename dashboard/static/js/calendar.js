@@ -37,21 +37,17 @@ function toTimestamp(dateString) {
 function getDateRange(startDateString, endDateString) {
   const [start, end] = [startDateString, endDateString].sort((a, b) => toTimestamp(a) - toTimestamp(b));
   const [startYear, startMonth, startDay] = start.split('-').map(Number);
-  const [endYear, endMonth, endDay] = end.split('-').map(Number);
   const cursor = new Date(startYear, startMonth - 1, startDay);
+  const rangeEndTimestamp = toTimestamp(end);
   const range = [];
-  while (
-    cursor.getFullYear() < endYear ||
-    (cursor.getFullYear() === endYear && cursor.getMonth() < endMonth - 1) ||
-    (cursor.getFullYear() === endYear && cursor.getMonth() === endMonth - 1 && cursor.getDate() <= endDay)
-  ) {
+  while (cursor.getTime() <= rangeEndTimestamp) {
     range.push(formatDate(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
   return range;
 }
 
-function cycleDateState(dateString, shouldRender = true) {
+function cycleDateState(dateString, renderAfterUpdate = true) {
   if (isWeekendDateString(dateString)) return;
   const state = getState(dateString);
   if (state === 'none') {
@@ -64,7 +60,7 @@ function cycleDateState(dateString, shouldRender = true) {
     festivos.delete(dateString);
     jornadaReducida.delete(dateString);
   }
-  if (shouldRender) renderCalendar();
+  if (renderAfterUpdate) renderCalendar();
 }
 
 function updateMonthPicker() {

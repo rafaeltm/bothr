@@ -76,6 +76,23 @@ def es_fichaje_realizado_hoy(tipo: str) -> bool:
     return False
 
 
+def get_fichaje_hoy(tipo: str) -> str | None:
+    """Return latest today's timestamp for `entrada` or `salida`, when available."""
+    today = datetime.now(config.TZ).date()
+    today_values: list[str] = []
+    for registro in read_fichaje_log():
+        timestamp = registro.get(tipo)
+        if not timestamp:
+            continue
+        try:
+            fecha = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').date()
+        except ValueError:
+            continue
+        if fecha == today:
+            today_values.append(timestamp)
+    return max(today_values) if today_values else None
+
+
 
 def write_fichaje_log(tipo: str, timestamp: str) -> None:
     registros = read_fichaje_log()
@@ -140,43 +157,94 @@ def _seconds_until(target_time: time) -> float:
     return max((target - now).total_seconds(), 0)
 
 
+def _next_working_clock_in(reference: datetime) -> datetime:
+    cursor = reference
+    for _ in range(366):
+        hours = get_fichaje_hours(cursor)
+        if hours is not None:
+            target = datetime.combine(cursor.date(), hours['clock_in'], tzinfo=config.TZ)
+            if target > reference:
+                return target
+        cursor = datetime.combine((cursor + timedelta(days=1)).date(), time.min, tzinfo=config.TZ)
+    raise RuntimeError('No se encontró un día laborable en los próximos 366 días.')
+
+
 
 def get_status_payload() -> dict[str, object]:
     now = datetime.now(config.TZ)
     hours = get_fichaje_hours(now)
-    today_clocked_in = es_fichaje_realizado_hoy('entrada')
-    today_clocked_out = es_fichaje_realizado_hoy('salida')
+    today_clocked_in_at = get_fichaje_hoy('entrada')
+    today_clocked_out_at = get_fichaje_hoy('salida')
+    today_clocked_in = today_clocked_in_at is not None
+    today_clocked_out = today_clocked_out_at is not None
 
     if es_festivo(now) or hours is None:
+        try:
+            next_working_entry = _next_working_clock_in(now)
+        except RuntimeError:
+            return {
+                'next_action': 'ninguna',
+                'next_action_at': None,
+                'time_remaining': 'Sin día laborable configurado',
+                'today_clocked_in': today_clocked_in,
+                'today_clocked_out': today_clocked_out,
+                'today_clocked_in_at': today_clocked_in_at,
+                'today_clocked_out_at': today_clocked_out_at,
+            }
         return {
-            'next_action': 'ninguna',
-            'time_remaining': 'No laborable',
+            'next_action': 'entrada',
+            'next_action_at': next_working_entry.strftime('%Y-%m-%d %H:%M:%S'),
+            'time_remaining': _format_seconds((next_working_entry - now).total_seconds()),
             'today_clocked_in': today_clocked_in,
             'today_clocked_out': today_clocked_out,
+            'today_clocked_in_at': today_clocked_in_at,
+            'today_clocked_out_at': today_clocked_out_at,
         }
 
     if not today_clocked_in:
+        target = datetime.combine(now.date(), hours['clock_in'], tzinfo=config.TZ)
         return {
             'next_action': 'entrada',
+            'next_action_at': target.strftime('%Y-%m-%d %H:%M:%S'),
             'time_remaining': _format_seconds(_seconds_until(hours['clock_in'])),
             'today_clocked_in': today_clocked_in,
             'today_clocked_out': today_clocked_out,
+            'today_clocked_in_at': today_clocked_in_at,
+            'today_clocked_out_at': today_clocked_out_at,
         }
 
     if not today_clocked_out:
+        target = datetime.combine(now.date(), hours['clock_out'], tzinfo=config.TZ)
         return {
             'next_action': 'salida',
+            'next_action_at': target.strftime('%Y-%m-%d %H:%M:%S'),
             'time_remaining': _format_seconds(_seconds_until(hours['clock_out'])),
             'today_clocked_in': today_clocked_in,
             'today_clocked_out': today_clocked_out,
+            'today_clocked_in_at': today_clocked_in_at,
+            'today_clocked_out_at': today_clocked_out_at,
         }
 
-    midnight = datetime.combine((now + timedelta(days=1)).date(), time.min, tzinfo=config.TZ)
+    try:
+        next_working_entry = _next_working_clock_in(now)
+    except RuntimeError:
+        return {
+            'next_action': 'ninguna',
+            'next_action_at': None,
+            'time_remaining': 'Sin día laborable configurado',
+            'today_clocked_in': today_clocked_in,
+            'today_clocked_out': today_clocked_out,
+            'today_clocked_in_at': today_clocked_in_at,
+            'today_clocked_out_at': today_clocked_out_at,
+        }
     return {
-        'next_action': 'mañana',
-        'time_remaining': _format_seconds((midnight - now).total_seconds()),
+        'next_action': 'entrada',
+        'next_action_at': next_working_entry.strftime('%Y-%m-%d %H:%M:%S'),
+        'time_remaining': _format_seconds((next_working_entry - now).total_seconds()),
         'today_clocked_in': today_clocked_in,
         'today_clocked_out': today_clocked_out,
+        'today_clocked_in_at': today_clocked_in_at,
+        'today_clocked_out_at': today_clocked_out_at,
     }
 
 
