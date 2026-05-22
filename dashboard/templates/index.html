@@ -43,15 +43,29 @@
 
 {% block scripts %}
 <script>
+  function formatNextAction(data) {
+    const action = data.next_action || '-';
+    const actionAt = data.next_action_at || '';
+    return actionAt ? `${action} (${actionAt})` : action;
+  }
+
+  function formatTodayStatus(timestamp, fallbackDone) {
+    if (timestamp) return timestamp;
+    return fallbackDone ? 'Completada' : 'Pendiente';
+  }
+
   async function refreshStatus() {
     try {
       const response = await fetch('/api/status');
+      if (!response.ok) {
+        throw new Error('Status no disponible');
+      }
       const data = await response.json();
-      document.getElementById('nextAction').textContent = data.next_action || '-';
+      document.getElementById('nextAction').textContent = formatNextAction(data);
       document.getElementById('timeRemaining').textContent = data.time_remaining || '-';
-      document.getElementById('todayIn').textContent = data.today_clocked_in ? 'Completada' : 'Pendiente';
-      document.getElementById('todayOut').textContent = data.today_clocked_out ? 'Completada' : 'Pendiente';
-      document.getElementById('statusBadge').textContent = data.next_action || 'sin acción';
+      document.getElementById('todayIn').textContent = formatTodayStatus(data.today_clocked_in_at, data.today_clocked_in);
+      document.getElementById('todayOut').textContent = formatTodayStatus(data.today_clocked_out_at, data.today_clocked_out);
+      document.getElementById('statusBadge').textContent = formatNextAction(data);
     } catch (error) {
       window.showToast('No se pudo actualizar el estado.', true);
     }

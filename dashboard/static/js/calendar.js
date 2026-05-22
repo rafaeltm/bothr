@@ -4,6 +4,7 @@ const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Juli
 let currentDate = new Date();
 let festivos = new Set();
 let jornadaReducida = new Set();
+let lastSelectedDate = null;
 
 function formatDate(date) {
   const year = date.getFullYear();
@@ -18,7 +19,37 @@ function getState(dateString) {
   return 'none';
 }
 
-function cycleDateState(dateString) {
+function isWeekendDateString(dateString) {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const weekday = new Date(year, month - 1, day).getDay();
+  return weekday === 0 || weekday === 6;
+}
+
+function sanitizeWorkdays(dateList) {
+  if (!dateList) return [];
+  return dateList.filter((dateString) => !isWeekendDateString(dateString));
+}
+
+function toTimestamp(dateString) {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day).getTime();
+}
+
+function getDateRange(startDateString, endDateString) {
+  const [start, end] = [startDateString, endDateString].sort((a, b) => toTimestamp(a) - toTimestamp(b));
+  const [startYear, startMonth, startDay] = start.split('-').map(Number);
+  const cursor = new Date(startYear, startMonth - 1, startDay);
+  const rangeEndTimestamp = toTimestamp(end);
+  const range = [];
+  while (cursor.getTime() <= rangeEndTimestamp) {
+    range.push(formatDate(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return range;
+}
+
+function cycleDateState(dateString, renderAfterUpdate = true) {
+  if (isWeekendDateString(dateString)) return;
   const state = getState(dateString);
   if (state === 'none') {
     festivos.add(dateString);
@@ -30,6 +61,20 @@ function cycleDateState(dateString) {
     festivos.delete(dateString);
     jornadaReducida.delete(dateString);
   }
+  if (renderAfterUpdate) renderCalendar();
+}
+
+function updateMonthPicker() {
+  const picker = document.getElementById('monthPicker');
+  const year = currentDate.getFullYear();
+  const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+  picker.value = `${year}-${month}`;
+}
+
+function handleDateSelection(dateString, useRangeSelection) {
+  const dateStrings = useRangeSelection && lastSelectedDate ? getDateRange(lastSelectedDate, dateString) : [dateString];
+  dateStrings.forEach((selectedDateString) => cycleDateState(selectedDateString, false));
+  lastSelectedDate = dateString;
   renderCalendar();
 }
 
@@ -38,6 +83,7 @@ function renderCalendar() {
   const title = document.getElementById('calendarTitle');
   grid.innerHTML = '';
   title.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+  updateMonthPicker();
 
   weekdayNames.forEach((name) => {
     const cell = document.createElement('div');
@@ -59,18 +105,33 @@ function renderCalendar() {
   for (let day = 1; day <= lastDay.getDate(); day += 1) {
     const cellDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
     const dateString = formatDate(cellDate);
+    const isWeekend = cellDate.getDay() === 0 || cellDate.getDay() === 6;
     const state = getState(dateString);
 
     const cell = document.createElement('button');
     cell.type = 'button';
     cell.className = 'calendar-day';
+    if (isWeekend) {
+      cell.classList.add('is-weekend');
+      cell.disabled = true;
+    }
     if (state === 'festivo') cell.classList.add('is-festivo');
     if (state === 'jornada_reducida') cell.classList.add('is-reducida');
     cell.innerHTML = `
       <div class="fw-semibold">${day}</div>
-      <div class="small mt-2">${state === 'festivo' ? 'Festivo' : state === 'jornada_reducida' ? 'Jornada reducida' : 'Normal'}</div>
+      <div class="small mt-2">${
+        isWeekend
+          ? 'Bloqueado'
+          : state === 'festivo'
+            ? 'Festivo'
+            : state === 'jornada_reducida'
+              ? 'Jornada reducida'
+              : 'Normal'
+      }</div>
     `;
-    cell.addEventListener('click', () => cycleDateState(dateString));
+    if (!isWeekend) {
+      cell.addEventListener('click', (event) => handleDateSelection(dateString, event.shiftKey));
+    }
     grid.appendChild(cell);
   }
 }
@@ -83,14 +144,14 @@ async function loadCalendarData() {
 
   const festivosData = await festivosResponse.json();
   const reducidaData = await reducidaResponse.json();
-  festivos = new Set(festivosData.festivos || []);
-  jornadaReducida = new Set(reducidaData.dias || []);
+  festivos = new Set(sanitizeWorkdays(festivosData.festivos));
+  jornadaReducida = new Set(sanitizeWorkdays(reducidaData.dias));
   renderCalendar();
 }
 
 async function saveCalendarData() {
-  const festivosPayload = { festivos: Array.from(festivos).sort() };
-  const reducidaPayload = { dias: Array.from(jornadaReducida).sort() };
+  const festivosPayload = { festivos: sanitizeWorkdays(Array.from(festivos)).sort() };
+  const reducidaPayload = { dias: sanitizeWorkdays(Array.from(jornadaReducida)).sort() };
 
   const [festivosResponse, reducidaResponse] = await Promise.all([
     fetch('/api/festivos', {
@@ -131,8 +192,8 @@ function importCalendarData(file) {
   reader.onload = () => {
     try {
       const data = JSON.parse(reader.result);
-      festivos = new Set(data.festivos || []);
-      jornadaReducida = new Set(data.dias || []);
+      festivos = new Set(sanitizeWorkdays(data.festivos));
+      jornadaReducida = new Set(sanitizeWorkdays(data.dias));
       renderCalendar();
       window.showToast('Calendario importado correctamente.');
     } catch (error) {
@@ -149,6 +210,13 @@ document.getElementById('prevMonth').addEventListener('click', () => {
 
 document.getElementById('nextMonth').addEventListener('click', () => {
   currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+  renderCalendar();
+});
+
+document.getElementById('monthPicker').addEventListener('change', (event) => {
+  if (!event.target.value) return;
+  const [year, month] = event.target.value.split('-').map(Number);
+  currentDate = new Date(year, month - 1, 1);
   renderCalendar();
 });
 

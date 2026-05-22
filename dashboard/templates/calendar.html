@@ -11,6 +11,7 @@
       <div class="d-flex flex-wrap gap-2">
         <button class="btn btn-outline-secondary" id="prevMonth" type="button">&laquo; Mes anterior</button>
         <button class="btn btn-outline-secondary" id="nextMonth" type="button">Mes siguiente &raquo;</button>
+        <input class="form-control month-picker" id="monthPicker" type="month" aria-label="Seleccionar mes">
         <button class="btn btn-outline-primary" id="importBtn" type="button">Importar JSON</button>
         <button class="btn btn-outline-primary" id="exportBtn" type="button">Exportar JSON</button>
         <button class="btn btn-primary" id="saveCalendar" type="button">Guardar cambios</button>
@@ -22,7 +23,9 @@
       <span class="badge rounded-pill text-bg-light border">Normal</span>
       <span class="badge rounded-pill text-bg-danger">Festivo</span>
       <span class="badge rounded-pill text-bg-warning text-dark">Jornada reducida</span>
+      <span class="badge rounded-pill text-bg-secondary">Fin de semana bloqueado</span>
     </div>
+    <p class="text-muted small mb-3">Usa <strong>Shift + clic</strong> para aplicar el cambio a un rango de días.</p>
 
     <div class="calendar-header mb-2">
       <h2 class="h4 mb-0" id="calendarTitle"></h2>
