@@ -51,6 +51,18 @@ This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both st
 - **Calendar**: maintain holidays and reduced-workdays with a clickable month grid plus JSON import/export.
 - **Logs**: inspect the latest scheduler logs and current fichaje state with auto-refresh.
 
+## Telegram commands
+
+The bot still sends scheduler notifications to `CHAT_ID`, and it now also answers read-only commands in that same configured chat:
+
+- `/help` — lists the available commands.
+- `/status` — shows the current summary, including next action and today's fichajes.
+- `/today` — shows today's planned schedule plus recorded entry/exit times.
+- `/next` — shows the next scheduled action and the remaining time.
+- `/calendar` — shows the next configured holidays and reduced-workday dates.
+
+For safety, command responses are restricted to the configured `CHAT_ID`.
+
 ## API endpoints
 
 | Method | Endpoint | Description |
