@@ -20,6 +20,7 @@ MAX_WORKDAY_LOOKAHEAD_DAYS = 366
 logger = logging.getLogger('bothr')
 # Matches "YYYY-MM-DD HH:MM:SS" / "YYYY-MM-DDTHH:MM:SS" with optional fractional seconds and timezone.
 TIMESTAMP_PATTERN = re.compile(r'(?P<timestamp>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)')
+OFFSET_WITH_COLON_PATTERN = re.compile(r'[+-]\d{2}:\d{2}$')
 
 
 def _setup_logger() -> None:
@@ -65,7 +66,7 @@ def _parse_timestamp(timestamp: str) -> datetime | None:
     if normalized.endswith('Z'):
         normalized = f'{normalized[:-1]}+00:00'
     # Accept timezone offsets with colon by normalizing +HH:MM -> +HHMM for strict parsers.
-    if len(normalized) >= 6 and normalized[-3] == ':' and normalized[-6] in ('+', '-'):
+    if OFFSET_WITH_COLON_PATTERN.search(normalized):
         normalized = f'{normalized[:-3]}{normalized[-2:]}'
     try:
         parsed = datetime.fromisoformat(normalized)
@@ -79,9 +80,13 @@ def _parse_timestamp(timestamp: str) -> datetime | None:
 
 def _to_fichaje_record(line: str) -> dict[str, str] | None:
     lowered = line.lower()
-    if 'entrada' in lowered:
+    has_entrada = re.search(r'\bentrada\b', lowered) is not None
+    has_salida = re.search(r'\bsalida\b', lowered) is not None
+    if has_entrada and has_salida:
+        tipo = 'entrada' if lowered.rfind('entrada') > lowered.rfind('salida') else 'salida'
+    elif has_entrada:
         tipo = 'entrada'
-    elif 'salida' in lowered:
+    elif has_salida:
         tipo = 'salida'
     else:
         return None
@@ -158,7 +163,7 @@ def es_fichaje_realizado_hoy(tipo: str) -> bool:
 def get_fichaje_hoy(tipo: str) -> str | None:
     """Return latest today's timestamp for `entrada` or `salida`, when available."""
     today = datetime.now(config.TZ).date()
-    today_values: list[datetime] = []
+    today_timestamps: list[datetime] = []
     for registro in read_fichaje_log():
         timestamp = registro.get(tipo)
         if not timestamp:
@@ -168,8 +173,8 @@ def get_fichaje_hoy(tipo: str) -> str | None:
             continue
         fecha = parsed.date()
         if fecha == today:
-            today_values.append(parsed)
-    return max(today_values).strftime('%Y-%m-%d %H:%M:%S') if today_values else None
+            today_timestamps.append(parsed)
+    return max(today_timestamps).strftime('%Y-%m-%d %H:%M:%S') if today_timestamps else None
 
 
 
