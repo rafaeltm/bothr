@@ -267,8 +267,8 @@ def get_status_payload() -> dict[str, object]:
         'today_clocked_in_at': today_clocked_in_at,
         'today_clocked_out_at': today_clocked_out_at,
         'preferred_clock_in': config.PREFERRED_CLOCK_IN.strftime('%H:%M'),
-        'planned_clock_in': hours['clock_in'].strftime('%H:%M:%S') if hours else None,
-        'planned_clock_out': hours['clock_out'].strftime('%H:%M:%S') if hours else None,
+        'planned_clock_in': hours['clock_in'].strftime('%H:%M') if hours else None,
+        'planned_clock_out': hours['clock_out'].strftime('%H:%M') if hours else None,
     }
 
     if es_festivo(now) or hours is None:
