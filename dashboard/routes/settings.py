@@ -10,8 +10,7 @@ from bot import telegram
 from dashboard.app import auth
 
 settings_bp = Blueprint('settings', __name__)
-FORM_MASK = config.MASK_VALUE
-API_MASK = '***'
+MASK_VALUE = '***'
 logger = logging.getLogger('bothr')
 
 
@@ -44,13 +43,13 @@ def _write_env_file(values: dict[str, str]) -> None:
 
 
 def _get_form_settings() -> dict[str, object]:
-    return config.get_current_settings(mask_sensitive=True, mask=FORM_MASK)
+    return config.get_current_settings(mask_sensitive=True, mask=MASK_VALUE)
 
 
 @settings_bp.get('/api/settings')
 @auth.login_required
 def get_settings():
-    return jsonify(config.get_current_settings(mask_sensitive=True, mask=API_MASK))
+    return jsonify(config.get_current_settings(mask_sensitive=True, mask=MASK_VALUE))
 
 
 @settings_bp.post('/api/settings')
@@ -66,7 +65,7 @@ def save_settings():
         if key not in payload:
             continue
         value = payload[key]
-        if key in config.SENSITIVE_ENV_KEYS and value in {FORM_MASK, API_MASK}:
+        if key in config.SENSITIVE_ENV_KEYS and value == MASK_VALUE:
             continue
         if isinstance(value, bool):
             current[key] = 'true' if value else 'false'
@@ -78,7 +77,7 @@ def save_settings():
     _write_env_file(current)
     config.refresh(force_file_override=True)
     telegram.refresh_bot()
-    return jsonify({'success': True, 'settings': config.get_current_settings(mask_sensitive=True, mask=API_MASK)})
+    return jsonify({'success': True, 'settings': config.get_current_settings(mask_sensitive=True, mask=MASK_VALUE)})
 
 
 @settings_bp.post('/api/test-telegram')
@@ -98,4 +97,4 @@ def test_telegram():
 @settings_bp.get('/settings')
 @auth.login_required
 def settings_page():
-    return render_template('settings.html', settings=_get_form_settings(), form_mask=FORM_MASK)
+    return render_template('settings.html', settings=_get_form_settings(), form_mask=MASK_VALUE)

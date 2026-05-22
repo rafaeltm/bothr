@@ -86,7 +86,9 @@ def refresh(force_file_override: bool = False) -> None:
     are not overridden by .env values. When `force_file_override=True`, values from
     ENV_FILE override the process env (used by dashboard runtime updates).
     """
+    # 1) Preserve legacy behavior: discover .env without overriding existing process env.
     load_dotenv(override=False)
+    # 2) Optionally override from our managed ENV_FILE so dashboard changes apply at runtime.
     load_dotenv(ENV_FILE, override=force_file_override)
 
     globals().update(
