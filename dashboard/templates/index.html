@@ -126,7 +126,7 @@
     }
   });
 
-  loadPreferredClockIn().catch(() => window.showToast('No se pudo cargar la configuración.', true));
+  loadPreferredClockIn().catch(() => window.showToast('No se pudo cargar la hora deseada. Por favor, recarga la página.', true));
   refreshStatus();
   setInterval(refreshStatus, 30000);
 </script>
