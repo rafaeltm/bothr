@@ -27,8 +27,9 @@ def _format_env_value(value: str) -> str:
     """Escape and quote values before writing them to the .env file."""
     if value == '':
         return ''
+    needs_quotes = any(char.isspace() for char in value) or '#' in value or '"' in value
     escaped = value.replace('\\', '\\\\').replace('"', '\\"')
-    if any(char.isspace() for char in value) or '#' in value or '"' in value:
+    if needs_quotes:
         return f'"{escaped}"'
     return escaped
 
