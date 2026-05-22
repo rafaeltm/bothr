@@ -23,7 +23,7 @@ The `Build and Push Docker Image` GitHub Actions workflow now publishes a manife
 - `linux/amd64`
 - `linux/arm64`
 
-This allows `docker pull tmrafa/cactushr_bot:latest` to work on both standard x86_64 hosts and ARM64 devices.
+This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both standard x86_64 hosts and ARM64 devices (replace `<owner>` with your GitHub user or org, for example `rafaeltm`).
 
 ## Environment variables
 
