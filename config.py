@@ -84,7 +84,9 @@ def refresh(force_file_override: bool = False) -> None:
 
     By default, keep compatibility with previous behavior where process env values
     are not overridden by .env values. When `force_file_override=True`, values from
-    ENV_FILE override the process env (used by dashboard runtime updates).
+    ENV_FILE override the process env (used by dashboard runtime updates). The
+    first call intentionally uses dotenv discovery behavior (including parent dirs)
+    to remain compatible with previous deployments.
     """
     # 1) Preserve legacy behavior: discover .env without overriding existing process env.
     load_dotenv(override=False)

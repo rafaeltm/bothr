@@ -16,7 +16,7 @@ logger = logging.getLogger('bothr')
 
 
 def _stringify_value(value):
-    """Convert config values to strings suitable for .env persistence."""
+    """Convert config values into .env-safe string representations."""
     if isinstance(value, bool):
         return 'true' if value else 'false'
     return '' if value is None else str(value)
@@ -26,6 +26,7 @@ def _stringify_value(value):
 def _format_env_value(value: str) -> str:
     """Escape and quote values before writing them to the .env file."""
     if value == '':
+        # Keep explicit empty assignments as KEY= (no quoting needed).
         return ''
     needs_quotes = any(char.isspace() for char in value) or '#' in value or '"' in value
     escaped = value.replace('\\', '\\\\').replace('"', '\\"')
