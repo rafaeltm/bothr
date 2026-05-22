@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - release
+  pull_request:
+    branches:
+      - main
+      - release
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          if [ ! -f requirements.txt ]; then
+            echo "requirements.txt not found"
+            exit 1
+          fi
+          pip install -r requirements.txt
+
+      - name: Syntax check
+        run: |
+          mapfile -d '' py_files < <(
+            find . -type f -name "*.py" \
+              -not -path "./.venv/*" \
+              -not -path "./venv/*" \
+              -print0
+          )
+          if [ ${#py_files[@]} -eq 0 ]; then
+            echo "No Python files found for syntax check"
+            exit 1
+          fi
+          python -m py_compile "${py_files[@]}"
+
+  docker-build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t bothr:ci .
