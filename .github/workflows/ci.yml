@@ -27,14 +27,26 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          if [ ! -f requirements.txt ]; then
+            echo "requirements.txt not found"
+            exit 1
+          fi
+          pip install -r requirements.txt
 
       - name: Syntax check
         run: |
-          find . -type f -name "*.py" \
-            -not -path "./.venv/*" \
-            -not -path "./venv/*" \
-            -print0 | xargs -0 python -m py_compile
+          mapfile -d '' py_files < <(
+            find . -type f -name "*.py" \
+              -not -path "./.venv/*" \
+              -not -path "./venv/*" \
+              -print0
+          )
+          if [ ${#py_files[@]} -eq 0 ]; then
+            echo "No Python files found for syntax check"
+            exit 1
+          fi
+          python -m py_compile "${py_files[@]}"
 
   docker-build-check:
     runs-on: ubuntu-latest
