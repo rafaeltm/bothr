@@ -16,6 +16,8 @@ from bot import fichaje, telegram
 
 LOG_FILE = config.LOGS_DIR / 'general.log'
 MAX_WORKDAY_LOOKAHEAD_DAYS = 366
+REDUCED_WORK_HOURS = 7
+STANDARD_WORK_HOURS = 9
 logger = logging.getLogger('bothr')
 DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 # Supports timestamps like:
@@ -200,8 +202,8 @@ def es_festivo(reference: datetime | None = None) -> bool:
 def _get_work_hours(reference: datetime) -> int:
     today_str = reference.strftime('%Y-%m-%d')
     if reference.weekday() == 4 or today_str in config.load_jornada_reducida() or 6 <= reference.month <= 9:
-        return 7
-    return 9
+        return REDUCED_WORK_HOURS
+    return STANDARD_WORK_HOURS
 
 
 def get_fichaje_hours(reference: datetime | None = None) -> dict[str, time] | None:
