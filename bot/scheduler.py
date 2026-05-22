@@ -15,6 +15,7 @@ import config
 from bot import fichaje, telegram
 
 LOG_FILE = config.LOGS_DIR / 'general.log'
+MAX_WORKDAY_LOOKAHEAD_DAYS = 366
 logger = logging.getLogger('bothr')
 
 
@@ -159,14 +160,14 @@ def _seconds_until(target_time: time) -> float:
 
 def _next_working_clock_in(reference: datetime) -> datetime:
     cursor = reference
-    for _ in range(366):
+    for _ in range(MAX_WORKDAY_LOOKAHEAD_DAYS):
         hours = get_fichaje_hours(cursor)
         if hours is not None:
             target = datetime.combine(cursor.date(), hours['clock_in'], tzinfo=config.TZ)
             if target > reference:
                 return target
         cursor = datetime.combine((cursor + timedelta(days=1)).date(), time.min, tzinfo=config.TZ)
-    raise RuntimeError('No se encontró un día laborable en los próximos 366 días.')
+    raise RuntimeError(f'No se encontró un día laborable en los próximos {MAX_WORKDAY_LOOKAHEAD_DAYS} días.')
 
 
 

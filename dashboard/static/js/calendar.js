@@ -26,7 +26,8 @@ function isWeekendDateString(dateString) {
 }
 
 function sanitizeWorkdays(dateList) {
-  return (dateList || []).filter((dateString) => !isWeekendDateString(dateString));
+  if (!dateList) return [];
+  return dateList.filter((dateString) => !isWeekendDateString(dateString));
 }
 
 function toTimestamp(dateString) {
