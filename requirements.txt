@@ -1,3 +1,6 @@
 requests==2.28.2
-python-dotenv==0.21.0
+python-dotenv==1.0.0
 python-telegram-bot==20.0
+playwright
+flask==3.0.3
+flask-httpauth==4.8.0

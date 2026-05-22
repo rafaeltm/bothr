@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card shadow-sm border-0">
+  <div class="card-body p-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+      <div>
+        <h1 class="h3 mb-1">Calendario laboral</h1>
+        <p class="text-muted mb-0">Gestiona festivos y jornadas reducidas con un clic.</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-secondary" id="prevMonth" type="button">&laquo; Mes anterior</button>
+        <button class="btn btn-outline-secondary" id="nextMonth" type="button">Mes siguiente &raquo;</button>
+        <button class="btn btn-outline-primary" id="importBtn" type="button">Importar JSON</button>
+        <button class="btn btn-outline-primary" id="exportBtn" type="button">Exportar JSON</button>
+        <button class="btn btn-primary" id="saveCalendar" type="button">Guardar cambios</button>
+        <input class="d-none" type="file" id="importFile" accept="application/json">
+      </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+      <span class="badge rounded-pill text-bg-light border">Normal</span>
+      <span class="badge rounded-pill text-bg-danger">Festivo</span>
+      <span class="badge rounded-pill text-bg-warning text-dark">Jornada reducida</span>
+    </div>
+
+    <div class="calendar-header mb-2">
+      <h2 class="h4 mb-0" id="calendarTitle"></h2>
+    </div>
+    <div id="calendarGrid" class="calendar-grid"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+{% endblock %}
