@@ -16,7 +16,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: Docker
+    environment: Package
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
