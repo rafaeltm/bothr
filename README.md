@@ -40,13 +40,13 @@ This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both st
 | `FICHAJE_FILE` | No | Path to the fichaje history JSON file. Default: `data/fichaje.json`. |
 | `FESTIVOS_FILE` | No | Path to the holidays JSON file. Default: `data/festivos.json`. |
 | `JORNADA_REDUCIDA_FILE` | No | Path to the reduced-workday JSON file. Default: `data/jornada_reducida.json`. |
-| `PREFERRED_CLOCK_IN` | No | Preferred clock-in time used to calculate the planned entry/exit schedule. Default: `08:00`. |
+| `PREFERRED_CLOCK_IN` | No | Preferred reference time used to calculate planned exit time; planned entry applies a daily ±15 minute margin around it. Default: `08:00`. |
 | `DASHBOARD_PASSWORD` | No | HTTP Basic Auth password for the dashboard. Default: `admin`. |
 | `DASHBOARD_PORT` | No | Flask dashboard port. Default: `5000`. |
 
 ## Dashboard features
 
-- **Dashboard**: live view of the next action, countdown, today's clock-in/clock-out state, and the preferred clock-in time that drives the planned schedule.
+- **Dashboard**: live view of the next action, countdown, today's clock-in/clock-out state, the preferred clock-in reference, and the planned schedule.
 - **Settings**: update environment-backed configuration, preserve masked secrets, and test Telegram delivery.
 - **Calendar**: maintain holidays and reduced-workdays with a clickable month grid plus JSON import/export.
 - **Logs**: inspect the latest scheduler logs and current fichaje state with auto-refresh.
