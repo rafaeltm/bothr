@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import re
-from collections import deque
 from datetime import datetime, time, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -257,14 +256,42 @@ def _next_working_clock_in(reference: datetime) -> datetime:
 
 
 
+def _read_recent_log_lines(limit: int) -> list[str]:
+    """Read up to `limit` lines from the end of the scheduler log file."""
+    if limit <= 0 or not LOG_FILE.exists():
+        return []
+
+    with LOG_FILE.open('rb') as handle:
+        handle.seek(0, 2)
+        file_size = handle.tell()
+        if file_size <= 0:
+            return []
+
+        block_size = 4096
+        position = file_size
+        buffer = b''
+        line_count = 0
+
+        while position > 0 and line_count <= limit:
+            chunk_size = min(block_size, position)
+            position -= chunk_size
+            handle.seek(position)
+            buffer = handle.read(chunk_size) + buffer
+            line_count = buffer.count(b'\n')
+
+    return [
+        line.decode('utf-8', errors='replace').rstrip('\n')
+        for line in buffer.splitlines()[-limit:]
+    ]
+
+
 def get_last_error_line(limit: int = 300) -> str | None:
+    """Return the most recent ERROR/CRITICAL log line from the last `limit` entries."""
     if not LOG_FILE.exists():
         return None
-    with LOG_FILE.open('r', encoding='utf-8') as handle:
-        recent_lines = deque((line.rstrip("\n") for line in handle), maxlen=limit)
-        for line in reversed(recent_lines):
-            if any(marker in line for marker in ERROR_LEVEL_MARKERS):
-                return line
+    for line in reversed(_read_recent_log_lines(limit)):
+        if any(marker in line for marker in ERROR_LEVEL_MARKERS):
+            return line
     return None
 
 
@@ -340,10 +367,7 @@ def get_status_payload() -> dict[str, object]:
 
 
 def tail_log_lines(limit: int = 100) -> list[str]:
-    if not LOG_FILE.exists():
-        return []
-    with LOG_FILE.open('r', encoding='utf-8') as handle:
-        return [line.rstrip("\n") for line in deque(handle, maxlen=limit)]
+    return _read_recent_log_lines(limit)
 
 
 async def _perform_fichaje(tipo: str) -> bool:
