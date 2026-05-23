@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import re
-from collections import deque
 from datetime import datetime, time, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -28,6 +27,7 @@ DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 TIMESTAMP_PATTERN = re.compile(r'(?P<timestamp>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)')
 OFFSET_WITH_COLON_PATTERN = re.compile(r'(?P<hours>[+-]\d{2}):(?P<minutes>\d{2})$')
 ACTION_PATTERN = re.compile(r'\b(entrada|salida)\b')
+ERROR_LEVEL_MARKERS = (' - ERROR - ', ' - CRITICAL - ')
 
 
 def _setup_logger() -> None:
@@ -256,6 +256,52 @@ def _next_working_clock_in(reference: datetime) -> datetime:
 
 
 
+def _read_recent_log_lines(limit: int) -> list[str]:
+    """Read up to `limit` lines from the end of the scheduler log file.
+
+    Log bytes are decoded as UTF-8 with replacement to tolerate malformed/non-UTF-8 entries.
+    """
+    if limit <= 0 or not LOG_FILE.exists():
+        return []
+
+    with LOG_FILE.open('rb') as handle:
+        handle.seek(0, 2)
+        file_size = handle.tell()
+        if file_size <= 0:
+            return []
+
+        block_size = 4096
+        position = file_size
+        buffer = b''
+        line_count = 0
+
+        while position > 0 and line_count < limit:
+            chunk_size = min(block_size, position)
+            position -= chunk_size
+            handle.seek(position)
+            chunk = handle.read(chunk_size)
+            buffer = chunk + buffer
+            line_count += chunk.count(b'\n')
+
+    lines = [
+        line.decode('utf-8', errors='replace')
+        for line in buffer.splitlines()[-limit:]
+    ]
+    return lines
+
+
+def get_last_error_line(limit: int = 300) -> str | None:
+    """Return the most recent ERROR/CRITICAL log line from the last `limit` entries."""
+    if not LOG_FILE.exists():
+        return None
+    recent_lines = _read_recent_log_lines(limit)
+    for index in range(len(recent_lines) - 1, -1, -1):
+        line = recent_lines[index]
+        if any(marker in line for marker in ERROR_LEVEL_MARKERS):
+            return line
+    return None
+
+
 def get_status_payload() -> dict[str, object]:
     now = datetime.now(config.TZ)
     hours = get_fichaje_hours(now)
@@ -271,6 +317,7 @@ def get_status_payload() -> dict[str, object]:
         'preferred_clock_in': config.PREFERRED_CLOCK_IN.strftime('%H:%M'),
         'planned_clock_in': hours['clock_in'].strftime('%H:%M') if hours else None,
         'planned_clock_out': hours['clock_out'].strftime('%H:%M') if hours else None,
+        'last_error': get_last_error_line(),
     }
 
     if es_festivo(now) or hours is None:
@@ -327,10 +374,7 @@ def get_status_payload() -> dict[str, object]:
 
 
 def tail_log_lines(limit: int = 100) -> list[str]:
-    if not LOG_FILE.exists():
-        return []
-    with LOG_FILE.open('r', encoding='utf-8') as handle:
-        return [line.rstrip("\n") for line in deque(handle, maxlen=limit)]
+    return _read_recent_log_lines(limit)
 
 
 async def _perform_fichaje(tipo: str) -> bool:

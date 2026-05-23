@@ -17,6 +17,9 @@
           <div class="col-md-4"><div class="status-box"><div class="text-muted small">Tiempo restante</div><div class="fs-5 fw-semibold" id="logsStatusRemaining">{{ status.time_remaining }}</div></div></div>
           <div class="col-md-4"><div class="status-box"><div class="text-muted small">Estado de hoy</div><div class="small mt-2">Entrada: <span id="logsStatusIn" class="fw-semibold">{{ status.today_clocked_in_at if status.today_clocked_in_at else ('Completada' if status.today_clocked_in else 'Pendiente') }}</span><br>Salida: <span id="logsStatusOut" class="fw-semibold">{{ status.today_clocked_out_at if status.today_clocked_out_at else ('Completada' if status.today_clocked_out else 'Pendiente') }}</span></div></div></div>
         </div>
+        <div class="alert alert-danger mb-3 d-none" id="logsLastErrorBox">
+          <strong>Último error:</strong> <span id="logsLastErrorText"></span>
+        </div>
         <pre class="log-box mb-0" id="logLines">Cargando logs...</pre>
       </div>
     </div>
@@ -54,6 +57,7 @@
       document.getElementById('logsStatusIn').textContent = formatTodayStatus(statusData.today_clocked_in_at, statusData.today_clocked_in);
       document.getElementById('logsStatusOut').textContent = formatTodayStatus(statusData.today_clocked_out_at, statusData.today_clocked_out);
       document.getElementById('logsNextAction').textContent = formatNextAction(statusData);
+      window.renderLastError(statusData.last_error, 'logsLastErrorBox', 'logsLastErrorText');
     } catch (error) {
       window.showToast('No se pudieron cargar los logs.', true);
     }
