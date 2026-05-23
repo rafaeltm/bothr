@@ -56,8 +56,8 @@ async def log_event(message: str, level: int = logging.INFO) -> None:
     logger.log(level, message)
     try:
         await telegram.send_message(config.CHAT_ID, message)
-    except Exception:
-        logger.exception('No se pudo enviar el mensaje de Telegram.')
+    except Exception as exc:
+        logger.exception('No se pudo enviar el mensaje de Telegram: %s', exc)
 
 
 
