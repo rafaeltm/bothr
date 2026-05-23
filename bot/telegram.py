@@ -24,9 +24,10 @@ def refresh_bot() -> Bot | None:
 
 async def send_message(chat_id: str | None, text: str) -> None:
     current_bot = refresh_bot()
-    if not current_bot or not chat_id:
+    normalized_chat_id = str(chat_id).strip() if chat_id is not None else ''
+    if not current_bot or not normalized_chat_id:
         return
-    await current_bot.send_message(chat_id=chat_id, text=text)
+    await current_bot.send_message(chat_id=normalized_chat_id, text=text)
 
 
 def _is_authorized_chat(update: Update) -> bool:
