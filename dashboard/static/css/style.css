@@ -1,13 +1,92 @@
 body {
   min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(13, 110, 253, 0.15), transparent 45%),
+    radial-gradient(circle at top right, rgba(32, 201, 151, 0.15), transparent 45%),
+    #f5f8ff;
+  color: #1f2937;
+}
+
+.app-navbar {
+  background: linear-gradient(120deg, #0d6efd, #3b82f6 45%, #0ea5e9);
+}
+
+.navbar-brand {
+  letter-spacing: 0.02em;
+}
+
+.navbar .nav-link {
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link:focus {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.navbar .nav-link.active {
+  color: #0b3c7f !important;
+  background: #fff;
+  font-weight: 600;
+}
+
+.card {
+  border-radius: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.2) !important;
+  box-shadow: 0 0.75rem 2rem rgba(15, 23, 42, 0.08) !important;
+}
+
+.status-badge {
+  background: rgba(13, 110, 253, 0.12);
+  color: #0b3c7f;
+  border: 1px solid rgba(13, 110, 253, 0.25);
+  font-weight: 600;
+  padding: 0.5rem 0.8rem;
 }
 
 .status-box {
-  background: #f8f9fa;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
+  border: 1px solid rgba(13, 110, 253, 0.12);
   border-radius: 0.75rem;
   padding: 1rem;
   height: 100%;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.status-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1.2rem rgba(13, 110, 253, 0.14);
+  border-color: rgba(13, 110, 253, 0.28);
+}
+
+.btn {
+  border-radius: 0.7rem;
+}
+
+.btn-primary {
+  background: linear-gradient(120deg, #0d6efd, #2563eb);
+  border: none;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background: linear-gradient(120deg, #0b5ed7, #1d4ed8);
+}
+
+.form-control,
+.form-select {
+  border-radius: 0.65rem;
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
 }
 
 .calendar-header {
@@ -37,7 +116,7 @@ body {
 
 .calendar-day {
   min-height: 110px;
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff, #f8fbff);
   border: 1px solid rgba(0, 0, 0, 0.08);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
@@ -67,9 +146,10 @@ body {
   min-height: 420px;
   max-height: 65vh;
   overflow: auto;
-  background: #111827;
+  background: #0b1220;
   color: #f9fafb;
   border-radius: 0.75rem;
   padding: 1rem;
   white-space: pre-wrap;
+  border: 1px solid rgba(96, 165, 250, 0.2);
 }
