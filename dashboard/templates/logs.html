@@ -8,14 +8,14 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div>
             <h1 class="h3 mb-1">Logs</h1>
-            <p class="text-muted mb-0">Últimas 100 líneas del scheduler.</p>
+            <p class="text-muted mb-0">Seguimiento rápido del scheduler en tiempo real.</p>
           </div>
-          <span class="badge text-bg-dark" id="logsNextAction">{{ status.next_action }}{% if status.next_action_at %} ({{ status.next_action_at }}){% endif %}</span>
+          <span class="badge rounded-pill status-badge" id="logsNextAction">{{ status.next_action }}{% if status.next_action_at %} ({{ status.next_action_at }}){% endif %}</span>
         </div>
         <div class="row g-3 mb-3">
-          <div class="col-md-4"><div class="status-box"><div class="text-muted small">Próxima acción</div><div class="fs-5 fw-semibold" id="logsStatusAction">{{ status.next_action }}{% if status.next_action_at %} ({{ status.next_action_at }}){% endif %}</div></div></div>
-          <div class="col-md-4"><div class="status-box"><div class="text-muted small">Tiempo restante</div><div class="fs-5 fw-semibold" id="logsStatusRemaining">{{ status.time_remaining }}</div></div></div>
-          <div class="col-md-4"><div class="status-box"><div class="text-muted small">Estado de hoy</div><div class="small mt-2">Entrada: <span id="logsStatusIn" class="fw-semibold">{{ status.today_clocked_in_at if status.today_clocked_in_at else ('Completada' if status.today_clocked_in else 'Pendiente') }}</span><br>Salida: <span id="logsStatusOut" class="fw-semibold">{{ status.today_clocked_out_at if status.today_clocked_out_at else ('Completada' if status.today_clocked_out else 'Pendiente') }}</span></div></div></div>
+          <div class="col-md-4"><div class="status-box"><div class="text-muted small">🕒 Próxima acción</div><div class="fs-5 fw-semibold" id="logsStatusAction">{{ status.next_action }}{% if status.next_action_at %} ({{ status.next_action_at }}){% endif %}</div></div></div>
+          <div class="col-md-4"><div class="status-box"><div class="text-muted small">⏱️ Tiempo restante</div><div class="fs-5 fw-semibold" id="logsStatusRemaining">{{ status.time_remaining }}</div></div></div>
+          <div class="col-md-4"><div class="status-box"><div class="text-muted small">📌 Estado de hoy</div><div class="small mt-2">Entrada: <span id="logsStatusIn" class="fw-semibold">{{ status.today_clocked_in_at if status.today_clocked_in_at else ('Completada' if status.today_clocked_in else 'Pendiente') }}</span><br>Salida: <span id="logsStatusOut" class="fw-semibold">{{ status.today_clocked_out_at if status.today_clocked_out_at else ('Completada' if status.today_clocked_out else 'Pendiente') }}</span></div></div></div>
         </div>
         <div class="alert alert-danger mb-3 d-none" id="logsLastErrorBox">
           <strong>Último error:</strong> <span id="logsLastErrorText"></span>
