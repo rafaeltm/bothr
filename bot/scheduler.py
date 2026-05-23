@@ -28,6 +28,7 @@ DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 TIMESTAMP_PATTERN = re.compile(r'(?P<timestamp>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)')
 OFFSET_WITH_COLON_PATTERN = re.compile(r'(?P<hours>[+-]\d{2}):(?P<minutes>\d{2})$')
 ACTION_PATTERN = re.compile(r'\b(entrada|salida)\b')
+ERROR_LEVEL_MARKERS = (' - ERROR - ', ' - CRITICAL - ')
 
 
 def _setup_logger() -> None:
@@ -260,8 +261,9 @@ def get_last_error_line(limit: int = 300) -> str | None:
     if not LOG_FILE.exists():
         return None
     with LOG_FILE.open('r', encoding='utf-8') as handle:
-        for line in reversed([entry.rstrip("\n") for entry in deque(handle, maxlen=limit)]):
-            if ' - ERROR - ' in line or ' - CRITICAL - ' in line:
+        recent_lines = deque((line.rstrip("\n") for line in handle), maxlen=limit)
+        for line in reversed(recent_lines):
+            if any(marker in line for marker in ERROR_LEVEL_MARKERS):
                 return line
     return None
 
