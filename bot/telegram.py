@@ -22,10 +22,10 @@ def refresh_bot() -> Bot | None:
     return bot
 
 
-async def send_message(chat_id: str | None, text: str) -> None:
+async def send_message(chat_id: str | int | None, text: str) -> None:
     current_bot = refresh_bot()
-    normalized_chat_id = str(chat_id).strip() if chat_id is not None else ''
-    if not current_bot or not normalized_chat_id:
+    normalized_chat_id = chat_id.strip() if isinstance(chat_id, str) else chat_id
+    if not current_bot or normalized_chat_id in (None, ''):
         return
     await current_bot.send_message(chat_id=normalized_chat_id, text=text)
 
