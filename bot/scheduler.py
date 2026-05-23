@@ -275,7 +275,7 @@ def _read_recent_log_lines(limit: int) -> list[str]:
         buffer = b''
         line_count = 0
 
-        while position > 0 and line_count <= limit:
+        while position > 0 and line_count < limit:
             chunk_size = min(block_size, position)
             position -= chunk_size
             handle.seek(position)
@@ -284,7 +284,7 @@ def _read_recent_log_lines(limit: int) -> list[str]:
             line_count += chunk.count(b'\n')
 
     lines = [
-        line.decode('utf-8', errors='replace').rstrip('\n')
+        line.decode('utf-8', errors='replace')
         for line in buffer.splitlines()[-limit:]
     ]
     return lines
