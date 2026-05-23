@@ -275,7 +275,7 @@ def _read_recent_log_lines(limit: int) -> list[str]:
         buffer = b''
         line_count = 0
 
-        while position > 0 and line_count < limit:
+        while position > 0 and line_count <= limit:
             chunk_size = min(block_size, position)
             position -= chunk_size
             handle.seek(position)
@@ -283,17 +283,20 @@ def _read_recent_log_lines(limit: int) -> list[str]:
             buffer = chunk + buffer
             line_count += chunk.count(b'\n')
 
-    return [
+    lines = [
         line.decode('utf-8', errors='replace').rstrip('\n')
         for line in buffer.splitlines()[-limit:]
     ]
+    return lines
 
 
 def get_last_error_line(limit: int = 300) -> str | None:
     """Return the most recent ERROR/CRITICAL log line from the last `limit` entries."""
     if not LOG_FILE.exists():
         return None
-    for line in reversed(_read_recent_log_lines(limit)):
+    recent_lines = _read_recent_log_lines(limit)
+    for index in range(len(recent_lines) - 1, -1, -1):
+        line = recent_lines[index]
         if any(marker in line for marker in ERROR_LEVEL_MARKERS):
             return line
     return None
