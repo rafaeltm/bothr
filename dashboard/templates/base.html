@@ -48,6 +48,18 @@
         bodyEl.textContent = message;
         bootstrap.Toast.getOrCreateInstance(toastEl).show();
       };
+      window.renderLastError = function(lastError, boxId, textId) {
+        const errorBox = document.getElementById(boxId);
+        const errorText = document.getElementById(textId);
+        if (!errorBox || !errorText) return;
+        if (lastError) {
+          errorText.textContent = lastError;
+          errorBox.classList.remove('d-none');
+        } else {
+          errorText.textContent = '';
+          errorBox.classList.add('d-none');
+        }
+      };
     </script>
     {% block scripts %}{% endblock %}
   </body>

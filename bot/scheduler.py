@@ -257,7 +257,10 @@ def _next_working_clock_in(reference: datetime) -> datetime:
 
 
 def _read_recent_log_lines(limit: int) -> list[str]:
-    """Read up to `limit` lines from the end of the scheduler log file."""
+    """Read up to `limit` lines from the end of the scheduler log file.
+
+    Log bytes are decoded as UTF-8 with replacement to tolerate malformed/non-UTF-8 entries.
+    """
     if limit <= 0 or not LOG_FILE.exists():
         return []
 
@@ -276,8 +279,9 @@ def _read_recent_log_lines(limit: int) -> list[str]:
             chunk_size = min(block_size, position)
             position -= chunk_size
             handle.seek(position)
-            buffer = handle.read(chunk_size) + buffer
-            line_count = buffer.count(b'\n')
+            chunk = handle.read(chunk_size)
+            buffer = chunk + buffer
+            line_count += chunk.count(b'\n')
 
     return [
         line.decode('utf-8', errors='replace').rstrip('\n')

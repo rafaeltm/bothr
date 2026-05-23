@@ -57,15 +57,7 @@
       document.getElementById('logsStatusIn').textContent = formatTodayStatus(statusData.today_clocked_in_at, statusData.today_clocked_in);
       document.getElementById('logsStatusOut').textContent = formatTodayStatus(statusData.today_clocked_out_at, statusData.today_clocked_out);
       document.getElementById('logsNextAction').textContent = formatNextAction(statusData);
-      const errorBox = document.getElementById('logsLastErrorBox');
-      const errorText = document.getElementById('logsLastErrorText');
-      if (statusData.last_error) {
-        errorText.textContent = statusData.last_error;
-        errorBox.classList.remove('d-none');
-      } else {
-        errorText.textContent = '';
-        errorBox.classList.add('d-none');
-      }
+      window.renderLastError(statusData.last_error, 'logsLastErrorBox', 'logsLastErrorText');
     } catch (error) {
       window.showToast('No se pudieron cargar los logs.', true);
     }
