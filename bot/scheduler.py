@@ -256,6 +256,16 @@ def _next_working_clock_in(reference: datetime) -> datetime:
 
 
 
+def get_last_error_line(limit: int = 300) -> str | None:
+    if not LOG_FILE.exists():
+        return None
+    with LOG_FILE.open('r', encoding='utf-8') as handle:
+        for line in reversed([entry.rstrip("\n") for entry in deque(handle, maxlen=limit)]):
+            if ' - ERROR - ' in line or ' - CRITICAL - ' in line:
+                return line
+    return None
+
+
 def get_status_payload() -> dict[str, object]:
     now = datetime.now(config.TZ)
     hours = get_fichaje_hours(now)
@@ -271,6 +281,7 @@ def get_status_payload() -> dict[str, object]:
         'preferred_clock_in': config.PREFERRED_CLOCK_IN.strftime('%H:%M'),
         'planned_clock_in': hours['clock_in'].strftime('%H:%M') if hours else None,
         'planned_clock_out': hours['clock_out'].strftime('%H:%M') if hours else None,
+        'last_error': get_last_error_line(),
     }
 
     if es_festivo(now) or hours is None:

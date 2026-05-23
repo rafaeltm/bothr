@@ -44,6 +44,9 @@
             </div>
           </div>
         </div>
+        <div class="alert alert-danger mt-3 d-none" id="lastErrorBox">
+          <strong>Último error:</strong> <span id="lastErrorText"></span>
+        </div>
         <div class="status-box mt-3">
           <div class="row g-3 align-items-end">
             <div class="col-md-6">
@@ -101,6 +104,15 @@
       document.getElementById('plannedIn').textContent = getPlannedTimeLabel(data.planned_clock_in);
       document.getElementById('plannedOut').textContent = getPlannedTimeLabel(data.planned_clock_out);
       document.getElementById('statusBadge').textContent = formatNextAction(data);
+      const errorBox = document.getElementById('lastErrorBox');
+      const errorText = document.getElementById('lastErrorText');
+      if (data.last_error) {
+        errorText.textContent = data.last_error;
+        errorBox.classList.remove('d-none');
+      } else {
+        errorText.textContent = '';
+        errorBox.classList.add('d-none');
+      }
     } catch (error) {
       window.showToast('No se pudo actualizar el estado.', true);
     }
