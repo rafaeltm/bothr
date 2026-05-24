@@ -1,23 +1,10 @@
 from __future__ import annotations
 
-import secrets
-
 from flask import Flask, redirect, render_template, send_from_directory, url_for
-from flask_httpauth import HTTPBasicAuth
 
 import config
 
 app = Flask(__name__)
-auth = HTTPBasicAuth()
-
-
-@auth.verify_password
-def verify_password(username: str, password: str) -> str | None:
-    expected_password = config.DASHBOARD_PASSWORD or 'admin'
-    if (username or '') == 'admin' and secrets.compare_digest(password or '', expected_password):
-        return 'admin'
-    return None
-
 
 from dashboard.routes.calendar import calendar_bp  # noqa: E402
 from dashboard.routes.settings import settings_bp  # noqa: E402
@@ -27,13 +14,11 @@ app.register_blueprint(calendar_bp)
 
 
 @app.get('/')
-@auth.login_required
 def root():
     return redirect(url_for('dashboard'))
 
 
 @app.get('/dashboard')
-@auth.login_required
 def dashboard():
     return render_template('index.html')
 
