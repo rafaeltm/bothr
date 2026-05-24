@@ -200,6 +200,10 @@ body {
   gap: 0.75rem;
 }
 
+.calendar-grid > * {
+  min-width: 0;
+}
+
 /* On small screens make the calendar scroll horizontally */
 @media (max-width: 767.98px) {
   .calendar-scroll-wrapper {
@@ -236,11 +240,19 @@ body {
 }
 
 .calendar-day {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
   min-height: 110px;
   background: linear-gradient(180deg, #ffffff, #f8fbff);
   border: 1px solid rgba(0, 0, 0, 0.08);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.calendar-day .small {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .calendar-day:hover {
@@ -277,4 +289,3 @@ body {
   font-size: 0.8rem;
   -webkit-overflow-scrolling: touch;
 }
-
