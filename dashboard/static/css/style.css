@@ -1,5 +1,6 @@
+/* ─── Base ────────────────────────────────────────────────────────── */
 body {
-  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(circle at top left, rgba(13, 110, 253, 0.15), transparent 45%),
     radial-gradient(circle at top right, rgba(32, 201, 151, 0.15), transparent 45%),
@@ -7,6 +8,7 @@ body {
   color: #1f2937;
 }
 
+/* ─── Desktop top navbar ──────────────────────────────────────────── */
 .app-navbar {
   background: linear-gradient(120deg, #0d6efd, #3b82f6 45%, #0ea5e9);
 }
@@ -33,20 +35,104 @@ body {
   font-weight: 600;
 }
 
+/* ─── Mobile top bar ──────────────────────────────────────────────── */
+.mobile-header {
+  background: linear-gradient(120deg, #0d6efd, #3b82f6 45%, #0ea5e9);
+  /* Respect iOS status-bar safe area */
+  padding-top: env(safe-area-inset-top);
+  padding-left: max(1rem, env(safe-area-inset-left));
+  height: calc(52px + env(safe-area-inset-top));
+}
+
+.mobile-header-title {
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.03em;
+}
+
+/* ─── Main content area ───────────────────────────────────────────── */
+.app-main {
+  /* Leave room for the mobile bottom nav + iOS home indicator */
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  max-width: 900px;
+  margin-inline: auto;
+}
+
+@media (min-width: 992px) {
+  .app-main {
+    padding-bottom: 2rem;
+    max-width: 1200px;
+  }
+}
+
+/* ─── Bottom navigation (mobile) ─────────────────────────────────── */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(60px + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: #fff;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.07);
+  z-index: 1030;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-decoration: none;
+  padding: 0.35rem 0.25rem;
+  border-radius: 0.5rem;
+  min-height: 44px;           /* iOS minimum touch target */
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.bottom-nav-item.active {
+  color: #0d6efd;
+  font-weight: 700;
+}
+
+.bottom-nav-item:active {
+  background: rgba(13, 110, 253, 0.08);
+}
+
+.bottom-nav-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+/* ─── Cards ───────────────────────────────────────────────────────── */
 .card {
   border-radius: 1rem;
   border: 1px solid rgba(148, 163, 184, 0.2) !important;
   box-shadow: 0 0.75rem 2rem rgba(15, 23, 42, 0.08) !important;
 }
 
+/* ─── Status badge ────────────────────────────────────────────────── */
 .status-badge {
   background: rgba(13, 110, 253, 0.12);
   color: #0b3c7f;
   border: 1px solid rgba(13, 110, 253, 0.25);
   font-weight: 600;
   padding: 0.5rem 0.8rem;
+  white-space: normal;
+  text-align: center;
+  max-width: 100%;
 }
 
+/* ─── Status boxes ────────────────────────────────────────────────── */
 .status-box {
   background: linear-gradient(180deg, #ffffff, #f8fbff);
   border: 1px solid rgba(13, 110, 253, 0.12);
@@ -63,8 +149,18 @@ body {
   border-color: rgba(13, 110, 253, 0.28);
 }
 
+/* Force 2-column grid on phones for status boxes */
+@media (max-width: 575.98px) {
+  .status-box .fs-4,
+  .status-box .fs-5 {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* ─── Buttons ─────────────────────────────────────────────────────── */
 .btn {
   border-radius: 0.7rem;
+  min-height: 44px;            /* iOS touch target */
 }
 
 .btn-primary {
@@ -77,10 +173,12 @@ body {
   background: linear-gradient(120deg, #0b5ed7, #1d4ed8);
 }
 
+/* ─── Form controls ───────────────────────────────────────────────── */
 .form-control,
 .form-select {
   border-radius: 0.65rem;
   border-color: rgba(148, 163, 184, 0.45);
+  min-height: 44px;            /* iOS touch target */
 }
 
 .form-control:focus,
@@ -89,6 +187,7 @@ body {
   box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
 }
 
+/* ─── Calendar ────────────────────────────────────────────────────── */
 .calendar-header {
   display: flex;
   align-items: center;
@@ -99,6 +198,28 @@ body {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0.75rem;
+}
+
+/* On small screens make the calendar scroll horizontally */
+@media (max-width: 767.98px) {
+  .calendar-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .calendar-grid {
+    min-width: 560px;
+    gap: 0.35rem;
+  }
+
+  .calendar-day {
+    min-height: 72px !important;
+    padding: 0.55rem !important;
+  }
+
+  .calendar-day .small {
+    font-size: 0.65rem;
+  }
 }
 
 .calendar-weekday,
@@ -142,9 +263,10 @@ body {
   cursor: default;
 }
 
+/* ─── Logs ────────────────────────────────────────────────────────── */
 .log-box {
-  min-height: 420px;
-  max-height: 65vh;
+  min-height: 280px;
+  max-height: 55vh;
   overflow: auto;
   background: #0b1220;
   color: #f9fafb;
@@ -152,4 +274,7 @@ body {
   padding: 1rem;
   white-space: pre-wrap;
   border: 1px solid rgba(96, 165, 250, 0.2);
+  font-size: 0.8rem;
+  -webkit-overflow-scrolling: touch;
 }
+

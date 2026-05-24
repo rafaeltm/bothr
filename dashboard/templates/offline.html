@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0d6efd">
+    <title>Sin conexión – Bothr</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        min-height: 100svh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.25rem;
+        font-family: system-ui, -apple-system, sans-serif;
+        background: radial-gradient(circle at top left, rgba(13,110,253,.15), transparent 45%),
+                    radial-gradient(circle at top right, rgba(32,201,151,.15), transparent 45%),
+                    #f5f8ff;
+        color: #1f2937;
+        padding: 2rem;
+        text-align: center;
+      }
+      .icon { font-size: 3.5rem; line-height: 1; }
+      h1 { font-size: 1.5rem; font-weight: 700; color: #0b3c7f; }
+      p { color: #6b7280; max-width: 26ch; line-height: 1.6; }
+      button {
+        margin-top: 0.5rem;
+        padding: 0.65rem 1.5rem;
+        border: none;
+        border-radius: 0.7rem;
+        background: linear-gradient(120deg, #0d6efd, #2563eb);
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="icon">🕐</div>
+    <h1>Sin conexión</h1>
+    <p>No hay red disponible. Conéctate a internet para ver el estado del fichaje.</p>
+    <button onclick="location.reload()">Reintentar</button>
+  </body>
+</html>
