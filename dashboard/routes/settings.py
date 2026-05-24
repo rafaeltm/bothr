@@ -8,7 +8,6 @@ from flask import Blueprint, jsonify, render_template, request
 
 import config
 from bot import telegram
-from dashboard.app import auth
 
 settings_bp = Blueprint('settings', __name__)
 MASK_VALUE = '***'
@@ -63,13 +62,11 @@ def _get_form_settings() -> dict[str, object]:
 
 
 @settings_bp.get('/api/settings')
-@auth.login_required
 def get_settings():
     return jsonify(config.get_current_settings(mask_sensitive=True, mask=MASK_VALUE))
 
 
 @settings_bp.post('/api/settings')
-@auth.login_required
 def save_settings():
     payload = request.get_json(silent=True) or {}
     current = {
@@ -103,7 +100,6 @@ def save_settings():
 
 
 @settings_bp.post('/api/test-telegram')
-@auth.login_required
 def test_telegram():
     if not config.BOT_TOKEN or not config.CHAT_ID:
         return jsonify({'success': False, 'error': 'Configura BOT_TOKEN y CHAT_ID antes de probar Telegram.'}), 400
@@ -117,6 +113,5 @@ def test_telegram():
 
 
 @settings_bp.get('/settings')
-@auth.login_required
 def settings_page():
     return render_template('settings.html', settings=_get_form_settings(), form_mask=MASK_VALUE)
