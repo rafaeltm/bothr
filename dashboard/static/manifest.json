@@ -1,13 +1,17 @@
 {
-  "name": "Bothr",
+  "id": "/dashboard",
+  "name": "Bothr Dashboard",
   "short_name": "Bothr",
   "description": "Panel de control del bot de fichaje automático",
-  "start_url": "/dashboard",
+  "start_url": "/dashboard?source=pwa",
+  "scope": "/",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "display": "standalone",
-  "background_color": "#0d6efd",
+  "background_color": "#f5f8ff",
   "theme_color": "#0d6efd",
   "orientation": "portrait-primary",
   "lang": "es",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "/static/icons/icon-192.png",
@@ -20,6 +24,11 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
   ]
 }

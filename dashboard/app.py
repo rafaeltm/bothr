@@ -38,7 +38,9 @@ def service_worker():
 
 @app.get('/manifest.json')
 def web_manifest():
-    return send_from_directory(app.static_folder, 'manifest.json')
+    response = send_from_directory(app.static_folder, 'manifest.json')
+    response.headers['Cache-Control'] = 'no-cache'
+    return response
 
 
 
