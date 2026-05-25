@@ -8,6 +8,7 @@ import re
 from datetime import datetime, time, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Any
 
 from playwright.async_api import async_playwright
 
@@ -15,6 +16,7 @@ import config
 from bot import fichaje, telegram
 
 LOG_FILE = config.LOGS_DIR / 'general.log'
+ERROR_STATE_FILE = config.DATA_DIR / 'error_state.json'
 MAX_WORKDAY_LOOKAHEAD_DAYS = 366
 REDUCED_WORK_HOURS = 7
 STANDARD_WORK_HOURS = 9
@@ -318,6 +320,43 @@ def get_last_error_line(limit: int = 300) -> str | None:
     return None
 
 
+def _load_error_state() -> dict[str, Any]:
+    try:
+        with ERROR_STATE_FILE.open('r', encoding='utf-8') as handle:
+            data = json.load(handle)
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError:
+        logger.warning('No se pudo leer el estado de errores vistos: JSON inválido en %s.', ERROR_STATE_FILE)
+        return {}
+    except OSError:
+        logger.exception('No se pudo leer el estado de errores vistos en %s.', ERROR_STATE_FILE)
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _save_error_state(payload: dict[str, Any]) -> None:
+    config.ensure_parent(ERROR_STATE_FILE)
+    with ERROR_STATE_FILE.open('w', encoding='utf-8') as handle:
+        json.dump(payload, handle, indent=2, ensure_ascii=False)
+
+
+def get_visible_last_error() -> str | None:
+    last_error = get_last_error_line()
+    if not last_error:
+        return None
+    seen_last_error = _load_error_state().get('seen_last_error')
+    return None if seen_last_error == last_error else last_error
+
+
+def mark_last_error_as_seen() -> None:
+    last_error = get_last_error_line()
+    if last_error is None:
+        _save_error_state({})
+        return
+    _save_error_state({'seen_last_error': last_error})
+
+
 def get_status_payload() -> dict[str, object]:
     now = datetime.now(config.TZ)
     hours = get_fichaje_hours(now)
@@ -333,7 +372,7 @@ def get_status_payload() -> dict[str, object]:
         'preferred_clock_in': config.PREFERRED_CLOCK_IN.strftime('%H:%M'),
         'planned_clock_in': hours['clock_in'].strftime('%H:%M') if hours else None,
         'planned_clock_out': hours['clock_out'].strftime('%H:%M') if hours else None,
-        'last_error': get_last_error_line(),
+        'last_error': get_visible_last_error(),
     }
 
     if es_festivo(now) or hours is None:

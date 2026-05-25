@@ -80,17 +80,42 @@
         bodyEl.textContent = message;
         bootstrap.Toast.getOrCreateInstance(toastEl).show();
       };
-      window.renderLastError = function(lastError, boxId, textId) {
+      window.renderLastError = function(lastError, boxId, textId, buttonId = null) {
         const errorBox = document.getElementById(boxId);
         const errorText = document.getElementById(textId);
+        const actionButton = buttonId ? document.getElementById(buttonId) : null;
         if (!errorBox || !errorText) return;
         if (lastError) {
           errorText.textContent = lastError;
           errorBox.classList.remove('d-none');
+          actionButton?.classList.remove('d-none');
         } else {
           errorText.textContent = '';
           errorBox.classList.add('d-none');
+          actionButton?.classList.add('d-none');
         }
+      };
+      window.markLastErrorAsSeen = async function(refreshCallback) {
+        const response = await fetch('/api/errors/mark-seen', { method: 'POST' });
+        const rawBody = await response.text();
+        let data = {};
+        if (rawBody) {
+          try {
+            data = JSON.parse(rawBody);
+          } catch (error) {
+            if (response.ok) {
+              throw new Error('Respuesta inválida al marcar los errores como vistos.');
+            }
+            throw new Error('Error del servidor al marcar los errores como vistos.');
+          }
+        }
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'No se pudieron marcar los errores como vistos.');
+        }
+        if (typeof refreshCallback === 'function') {
+          await refreshCallback();
+        }
+        window.showToast('Errores marcados como vistos.');
       };
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
