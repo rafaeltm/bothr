@@ -57,6 +57,12 @@ def get_logs():
     return jsonify({'lines': scheduler.tail_log_lines(100)})
 
 
+@calendar_bp.post('/api/errors/mark-seen')
+def mark_errors_as_seen():
+    scheduler.mark_last_error_as_seen()
+    return jsonify({'success': True})
+
+
 @calendar_bp.get('/calendar')
 def calendar_page():
     return render_template('calendar.html')

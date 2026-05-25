@@ -80,17 +80,31 @@
         bodyEl.textContent = message;
         bootstrap.Toast.getOrCreateInstance(toastEl).show();
       };
-      window.renderLastError = function(lastError, boxId, textId) {
+      window.renderLastError = function(lastError, boxId, textId, buttonId = null) {
         const errorBox = document.getElementById(boxId);
         const errorText = document.getElementById(textId);
+        const actionButton = buttonId ? document.getElementById(buttonId) : null;
         if (!errorBox || !errorText) return;
         if (lastError) {
           errorText.textContent = lastError;
           errorBox.classList.remove('d-none');
+          actionButton?.classList.remove('d-none');
         } else {
           errorText.textContent = '';
           errorBox.classList.add('d-none');
+          actionButton?.classList.add('d-none');
         }
+      };
+      window.markErrorsAsSeen = async function(onSuccess) {
+        const response = await fetch('/api/errors/mark-seen', { method: 'POST' });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'No se pudieron marcar los errores como vistos.');
+        }
+        if (typeof onSuccess === 'function') {
+          await onSuccess();
+        }
+        window.showToast('Errores marcados como vistos.');
       };
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
