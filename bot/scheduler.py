@@ -345,6 +345,9 @@ def get_visible_last_error() -> str | None:
 
 def mark_last_error_as_seen() -> None:
     last_error = get_last_error_line()
+    if last_error is None:
+        _save_error_state({})
+        return
     _save_error_state({'seen_last_error': last_error})
 
 

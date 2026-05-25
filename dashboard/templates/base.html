@@ -106,7 +106,7 @@
             if (response.ok) {
               throw new Error('Respuesta inválida al marcar los errores como vistos.');
             }
-            throw new Error(rawBody);
+            throw new Error('No se pudieron marcar los errores como vistos.');
           }
         }
         if (!response.ok || !data.success) {
