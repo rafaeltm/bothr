@@ -97,7 +97,14 @@
       };
       window.markErrorsAsSeen = async function(onSuccess) {
         const response = await fetch('/api/errors/mark-seen', { method: 'POST' });
-        const data = await response.json().catch(() => ({}));
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (error) {
+          if (response.ok) {
+            throw new Error('Respuesta inválida al marcar los errores como vistos.');
+          }
+        }
         if (!response.ok || !data.success) {
           throw new Error(data.error || 'No se pudieron marcar los errores como vistos.');
         }

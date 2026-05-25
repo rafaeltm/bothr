@@ -319,7 +319,7 @@ def get_last_error_line(limit: int = 300) -> str | None:
     return None
 
 
-def _load_error_state() -> dict[str, str]:
+def _load_error_state() -> dict[str, object]:
     try:
         with ERROR_STATE_FILE.open('r', encoding='utf-8') as handle:
             data = json.load(handle)
@@ -328,7 +328,7 @@ def _load_error_state() -> dict[str, str]:
     return data if isinstance(data, dict) else {}
 
 
-def _save_error_state(payload: dict[str, str]) -> None:
+def _save_error_state(payload: dict[str, object]) -> None:
     config.ensure_parent(ERROR_STATE_FILE)
     with ERROR_STATE_FILE.open('w', encoding='utf-8') as handle:
         json.dump(payload, handle, indent=2, ensure_ascii=False)
