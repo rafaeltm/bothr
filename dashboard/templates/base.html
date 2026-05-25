@@ -79,7 +79,7 @@
     <script>
       const installState = {
         deferredPrompt: null,
-        isIosInstallPath: typeof window.navigator.standalone === 'boolean' && !('onbeforeinstallprompt' in window)
+        isIosSafari: typeof window.navigator.standalone === 'boolean' && !('onbeforeinstallprompt' in window)
       };
       const installButtons = [document.getElementById('installAppBtnDesktop'), document.getElementById('installAppBtnMobile')];
 
@@ -104,7 +104,7 @@
       };
       window.syncInstallButtons = function() {
         const canInstallPrompt = Boolean(installState.deferredPrompt);
-        const showIosHint = installState.isIosInstallPath && !window.isStandaloneMode();
+        const showIosHint = installState.isIosSafari && !window.isStandaloneMode();
         const shouldShow = !window.isStandaloneMode() && (canInstallPrompt || showIosHint);
         installButtons.forEach((button) => button?.classList.toggle('d-none', !shouldShow));
       };
@@ -127,7 +127,7 @@
           window.syncInstallButtons();
           return;
         }
-        if (installState.isIosInstallPath && !window.isStandaloneMode()) {
+        if (installState.isIosSafari && !window.isStandaloneMode()) {
           window.showToast('En Safari: Compartir → "Añadir a pantalla de inicio".');
         }
       };

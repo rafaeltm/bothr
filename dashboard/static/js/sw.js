@@ -67,11 +67,10 @@ self.addEventListener('fetch', (event) => {
         event.waitUntil(
           fetch(event.request)
             .then((response) => {
-              if (response && response.ok) {
+              if (response.ok) {
                 const responseClone = response.clone();
                 return caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
               }
-              return undefined;
             })
             .catch(() => undefined)
         );
