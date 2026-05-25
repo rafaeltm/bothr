@@ -357,7 +357,7 @@ def mark_last_error_as_seen() -> None:
     _save_error_state({'seen_last_error': last_error})
 
 
-def get_status_payload() -> dict[str, Any]:
+def get_status_payload() -> dict[str, object]:
     now = datetime.now(config.TZ)
     hours = get_fichaje_hours(now)
     today_clocked_in_at = get_fichaje_hoy('entrada')

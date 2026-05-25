@@ -95,7 +95,7 @@
           actionButton?.classList.add('d-none');
         }
       };
-      window.markLastErrorAsSeen = async function(onSuccess) {
+      window.markLastErrorAsSeen = async function(refreshCallback) {
         const response = await fetch('/api/errors/mark-seen', { method: 'POST' });
         const rawBody = await response.text();
         let data = {};
@@ -112,8 +112,8 @@
         if (!response.ok || !data.success) {
           throw new Error(data.error || 'No se pudieron marcar los errores como vistos.');
         }
-        if (typeof onSuccess === 'function') {
-          await onSuccess();
+        if (typeof refreshCallback === 'function') {
+          await refreshCallback();
         }
         window.showToast('Errores marcados como vistos.');
       };
