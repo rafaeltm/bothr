@@ -50,6 +50,31 @@ This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both st
 - **Settings**: update environment-backed configuration, preserve masked secrets, and test Telegram delivery.
 - **Calendar**: maintain holidays and reduced-workdays with a clickable month grid plus JSON import/export.
 - **Logs**: inspect the latest scheduler logs and current fichaje state with auto-refresh.
+- **PWA installable app**: install the dashboard on iPhone/Android home screen with offline shell and dedicated standalone mode.
+
+## Install as a PWA (without App Store)
+
+The dashboard supports Progressive Web App (PWA) installation, so it can be used like an app icon on the home screen.
+
+### iPhone (Safari)
+
+1. Open the dashboard URL in Safari.
+2. Tap **Share**.
+3. Tap **Add to Home Screen**.
+4. Open Bothr from the new home-screen icon.
+
+### Android (Chrome/Edge)
+
+1. Open the dashboard URL in the browser.
+2. Use **Install app** / **Add to Home screen** from the browser menu (or the install prompt).
+3. Launch Bothr from the installed icon.
+
+### Important limitations
+
+- This is a **PWA**, not a native iOS app distributed via App Store.
+- Installing does **not** require App Store publication.
+- Live scheduler data and API-backed views still require internet connectivity.
+- Offline mode keeps the app shell available and provides an offline fallback page.
 
 ## Telegram commands
 

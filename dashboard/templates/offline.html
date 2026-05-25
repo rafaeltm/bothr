@@ -2,8 +2,10 @@
 <html lang="es">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0d6efd">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Bothr">
     <title>Sin conexión – Bothr</title>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,7 +43,8 @@
   <body>
     <div class="icon">🕐</div>
     <h1>Sin conexión</h1>
-    <p>No hay red disponible. Conéctate a internet para ver el estado del fichaje.</p>
+    <p>No hay red disponible. Puedes abrir la app, pero los datos en vivo del fichaje requieren conexión.</p>
+    <button onclick="location.href='/dashboard'">Abrir dashboard</button>
     <button onclick="location.reload()">Reintentar</button>
   </body>
 </html>

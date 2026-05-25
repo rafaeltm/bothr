@@ -7,6 +7,8 @@
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
+    <meta name="application-name" content="Bothr Dashboard">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0d6efd">
 
     <!-- iOS PWA -->
@@ -29,13 +31,16 @@
           <a class="nav-link {% if request.path == '/calendar' %}active{% endif %}" href="{{ url_for('calendar_bp.calendar_page') }}">Calendar</a>
           <a class="nav-link {% if request.path == '/logs' %}active{% endif %}" href="{{ url_for('calendar_bp.logs_page') }}">Logs</a>
         </div>
+        <button class="btn btn-sm btn-light d-none ms-3 install-app-btn" type="button" id="installAppBtnDesktop">Instalar app</button>
       </div>
     </nav>
 
     <!-- Mobile top bar -->
     <header class="mobile-header d-flex d-lg-none align-items-center px-3">
       <span class="mobile-header-title">Bothr</span>
+      <button class="btn btn-sm btn-light ms-auto d-none install-app-btn" type="button" id="installAppBtnMobile">Instalar</button>
     </header>
+    <div class="offline-banner d-none" id="offlineBanner">Sin conexión: algunos datos requieren internet.</div>
 
     <main class="container-fluid app-main py-3 px-3">
       {% block content %}{% endblock %}
@@ -72,6 +77,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+      const installState = {
+        deferredPrompt: null,
+        isIos: /iphone|ipad|ipod/i.test(window.navigator.userAgent || '')
+      };
+
       window.showToast = function(message, isError = false) {
         const toastEl = document.getElementById('appToast');
         const bodyEl = document.getElementById('appToastBody');
@@ -79,6 +89,36 @@
         toastEl.classList.toggle('text-bg-primary', !isError);
         bodyEl.textContent = message;
         bootstrap.Toast.getOrCreateInstance(toastEl).show();
+      };
+      window.isStandaloneMode = function() {
+        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      };
+      window.syncStandaloneMode = function() {
+        document.body.classList.toggle('standalone-mode', window.isStandaloneMode());
+      };
+      window.syncConnectionBanner = function() {
+        const offlineBanner = document.getElementById('offlineBanner');
+        if (!offlineBanner) return;
+        offlineBanner.classList.toggle('d-none', navigator.onLine);
+      };
+      window.syncInstallButtons = function() {
+        const installButtons = [document.getElementById('installAppBtnDesktop'), document.getElementById('installAppBtnMobile')];
+        const canInstallPrompt = Boolean(installState.deferredPrompt);
+        const showIosHint = installState.isIos && !window.isStandaloneMode();
+        const shouldShow = !window.isStandaloneMode() && (canInstallPrompt || showIosHint);
+        installButtons.forEach((button) => button?.classList.toggle('d-none', !shouldShow));
+      };
+      window.handleInstallAction = async function() {
+        if (installState.deferredPrompt) {
+          installState.deferredPrompt.prompt();
+          await installState.deferredPrompt.userChoice.catch(() => null);
+          installState.deferredPrompt = null;
+          window.syncInstallButtons();
+          return;
+        }
+        if (installState.isIos && !window.isStandaloneMode()) {
+          window.showToast('En Safari: Compartir → "Añadir a pantalla de inicio".');
+        }
       };
       window.renderLastError = function(lastError, boxId, textId, buttonId = null) {
         const errorBox = document.getElementById(boxId);
@@ -117,6 +157,23 @@
         }
         window.showToast('Errores marcados como vistos.');
       };
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        installState.deferredPrompt = event;
+        window.syncInstallButtons();
+      });
+      window.addEventListener('appinstalled', () => {
+        installState.deferredPrompt = null;
+        window.syncStandaloneMode();
+        window.syncInstallButtons();
+      });
+      window.addEventListener('online', window.syncConnectionBanner);
+      window.addEventListener('offline', window.syncConnectionBanner);
+      document.getElementById('installAppBtnDesktop')?.addEventListener('click', window.handleInstallAction);
+      document.getElementById('installAppBtnMobile')?.addEventListener('click', window.handleInstallAction);
+      window.syncStandaloneMode();
+      window.syncConnectionBanner();
+      window.syncInstallButtons();
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
       }

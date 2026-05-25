@@ -8,6 +8,28 @@ body {
   color: #1f2937;
 }
 
+body.standalone-mode {
+  overscroll-behavior-y: contain;
+}
+
+.install-app-btn {
+  min-height: 36px;
+  border-radius: 999px;
+}
+
+.offline-banner {
+  position: sticky;
+  top: 0;
+  z-index: 1040;
+  background: #fff3cd;
+  color: #664d03;
+  border-bottom: 1px solid rgba(102, 77, 3, 0.25);
+  text-align: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 /* ─── Desktop top navbar ──────────────────────────────────────────── */
 .app-navbar {
   background: linear-gradient(120deg, #0d6efd, #3b82f6 45%, #0ea5e9);
@@ -42,6 +64,10 @@ body {
   padding-top: env(safe-area-inset-top);
   padding-left: max(1rem, env(safe-area-inset-left));
   height: calc(52px + env(safe-area-inset-top));
+}
+
+body.standalone-mode .mobile-header {
+  height: calc(56px + env(safe-area-inset-top));
 }
 
 .mobile-header-title {

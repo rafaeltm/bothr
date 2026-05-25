@@ -1,10 +1,17 @@
-const CACHE_NAME = 'bothr-v1';
+const CACHE_NAME = 'bothr-v2';
 
 // Static assets safe to cache (no sensitive data)
 const PRECACHE_URLS = [
+  '/',
+  '/dashboard',
+  '/calendar',
+  '/logs',
+  '/settings',
   '/offline',
+  '/manifest.json',
   '/static/css/style.css',
   '/static/js/calendar.js',
+  '/static/icons/apple-touch-icon.png',
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png',
 ];
@@ -39,15 +46,39 @@ self.addEventListener('fetch', (event) => {
   // Network-first for HTML pages so fresh content is always preferred
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/offline'))
+      fetch(event.request)
+        .then((response) => {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          return response;
+        })
+        .catch(async () => {
+          const cachedPage = await caches.match(event.request);
+          if (cachedPage) return cachedPage;
+
+          const routeFallback = await caches.match(url.pathname);
+          if (routeFallback) return routeFallback;
+
+          return caches.match('/offline');
+        })
     );
     return;
   }
 
-  // Cache-first for static assets
+  // Stale-while-revalidate for static assets
   event.respondWith(
-    caches.match(event.request).then(
-      (cached) => cached || fetch(event.request)
-    )
+    caches.match(event.request).then(async (cached) => {
+      const networkFetch = fetch(event.request)
+        .then((response) => {
+          if (response && response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return response;
+        })
+        .catch(() => cached);
+
+      return cached || networkFetch;
+    })
   );
 });
