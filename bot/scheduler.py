@@ -214,6 +214,15 @@ def _get_daily_clock_in_time(reference: datetime) -> time:
     return (preferred_clock_in + random_margin).time().replace(microsecond=0)
 
 
+def _get_daily_clock_out_time(reference: datetime) -> time:
+    preferred_clock_in_dt = datetime.combine(reference.date(), config.PREFERRED_CLOCK_IN, tzinfo=config.TZ)
+    work_hours = _get_work_hours(reference)
+    base_clock_out_dt = preferred_clock_in_dt + timedelta(hours=work_hours)
+    seeded_random = random.Random(reference.date().isoformat() + '-out')
+    random_margin = timedelta(minutes=seeded_random.randint(-15, 15))
+    return (base_clock_out_dt + random_margin).time().replace(microsecond=0)
+
+
 def get_fichaje_hours(reference: datetime | None = None) -> dict[str, time] | None:
     """Calculate stable daily clock-in and clock-out times for working days."""
     now = reference or datetime.now(config.TZ)
@@ -221,10 +230,8 @@ def get_fichaje_hours(reference: datetime | None = None) -> dict[str, time] | No
         return None
 
     clock_in_time = _get_daily_clock_in_time(now)
-    preferred_clock_in_dt = datetime.combine(now.date(), config.PREFERRED_CLOCK_IN, tzinfo=config.TZ)
-    work_hours = _get_work_hours(now)
-    clock_out_dt = preferred_clock_in_dt + timedelta(hours=work_hours)
-    return {'clock_in': clock_in_time, 'clock_out': clock_out_dt.time().replace(microsecond=0)}
+    clock_out_time = _get_daily_clock_out_time(now)
+    return {'clock_in': clock_in_time, 'clock_out': clock_out_time}
 
 
 async def esperar_hora(target_time: time) -> None:
