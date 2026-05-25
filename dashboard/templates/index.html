@@ -135,7 +135,7 @@
 
   document.getElementById('markLastErrorSeenBtn').addEventListener('click', async () => {
     try {
-      await window.markErrorsAsSeen(refreshStatus);
+      await window.markLastErrorAsSeen(refreshStatus);
     } catch (error) {
       window.showToast(error.message, true);
     }

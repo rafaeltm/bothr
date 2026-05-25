@@ -8,6 +8,7 @@ import re
 from datetime import datetime, time, timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Any
 
 from playwright.async_api import async_playwright
 
@@ -319,7 +320,7 @@ def get_last_error_line(limit: int = 300) -> str | None:
     return None
 
 
-def _load_error_state() -> dict[str, object]:
+def _load_error_state() -> dict[str, Any]:
     try:
         with ERROR_STATE_FILE.open('r', encoding='utf-8') as handle:
             data = json.load(handle)
@@ -328,7 +329,7 @@ def _load_error_state() -> dict[str, object]:
     return data if isinstance(data, dict) else {}
 
 
-def _save_error_state(payload: dict[str, object]) -> None:
+def _save_error_state(payload: dict[str, Any]) -> None:
     config.ensure_parent(ERROR_STATE_FILE)
     with ERROR_STATE_FILE.open('w', encoding='utf-8') as handle:
         json.dump(payload, handle, indent=2, ensure_ascii=False)
@@ -347,7 +348,7 @@ def mark_last_error_as_seen() -> None:
     _save_error_state({'seen_last_error': last_error or ''})
 
 
-def get_status_payload() -> dict[str, object]:
+def get_status_payload() -> dict[str, Any]:
     now = datetime.now(config.TZ)
     hours = get_fichaje_hours(now)
     today_clocked_in_at = get_fichaje_hoy('entrada')

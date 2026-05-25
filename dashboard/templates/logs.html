@@ -68,7 +68,7 @@
 
   document.getElementById('markLogsLastErrorSeenBtn').addEventListener('click', async () => {
     try {
-      await window.markErrorsAsSeen(refreshLogs);
+      await window.markLastErrorAsSeen(refreshLogs);
     } catch (error) {
       window.showToast(error.message, true);
     }
