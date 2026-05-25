@@ -324,7 +324,13 @@ def _load_error_state() -> dict[str, Any]:
     try:
         with ERROR_STATE_FILE.open('r', encoding='utf-8') as handle:
             data = json.load(handle)
-    except (FileNotFoundError, json.JSONDecodeError, OSError):
+    except FileNotFoundError:
+        return {}
+    except json.JSONDecodeError:
+        logger.warning('No se pudo leer el estado de errores vistos: JSON inválido en %s.', ERROR_STATE_FILE)
+        return {}
+    except OSError:
+        logger.exception('No se pudo leer el estado de errores vistos en %s.', ERROR_STATE_FILE)
         return {}
     return data if isinstance(data, dict) else {}
 
