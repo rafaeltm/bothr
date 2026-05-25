@@ -111,8 +111,13 @@
       window.handleInstallAction = async function() {
         if (installState.deferredPrompt) {
           installState.deferredPrompt.prompt();
-          await installState.deferredPrompt.userChoice.catch(() => null);
+          const installResult = await installState.deferredPrompt.userChoice.catch(() => null);
           installState.deferredPrompt = null;
+          if (installResult?.outcome === 'accepted') {
+            window.showToast('Instalación iniciada correctamente.');
+          } else if (installResult?.outcome === 'dismissed') {
+            window.showToast('Instalación cancelada por el usuario.');
+          }
           window.syncInstallButtons();
           return;
         }
