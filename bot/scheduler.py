@@ -345,7 +345,7 @@ def get_visible_last_error() -> str | None:
 
 def mark_last_error_as_seen() -> None:
     last_error = get_last_error_line()
-    _save_error_state({'seen_last_error': last_error or ''})
+    _save_error_state({'seen_last_error': last_error})
 
 
 def get_status_payload() -> dict[str, Any]:
