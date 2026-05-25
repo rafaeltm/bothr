@@ -79,7 +79,7 @@
     <script>
       const installState = {
         deferredPrompt: null,
-        isIos: /iphone|ipad|ipod/i.test(window.navigator.userAgent || '')
+        isIosInstallPath: typeof window.navigator.standalone === 'boolean' && !('onbeforeinstallprompt' in window)
       };
       const installButtons = [document.getElementById('installAppBtnDesktop'), document.getElementById('installAppBtnMobile')];
 
@@ -104,7 +104,7 @@
       };
       window.syncInstallButtons = function() {
         const canInstallPrompt = Boolean(installState.deferredPrompt);
-        const showIosHint = installState.isIos && !window.isStandaloneMode();
+        const showIosHint = installState.isIosInstallPath && !window.isStandaloneMode();
         const shouldShow = !window.isStandaloneMode() && (canInstallPrompt || showIosHint);
         installButtons.forEach((button) => button?.classList.toggle('d-none', !shouldShow));
       };
@@ -115,6 +115,7 @@
           try {
             installResult = await installState.deferredPrompt.userChoice;
           } catch (error) {
+            console.error('Install prompt failed', error);
             window.showToast('No se pudo completar el diálogo de instalación.', true);
           }
           installState.deferredPrompt = null;
@@ -126,7 +127,7 @@
           window.syncInstallButtons();
           return;
         }
-        if (installState.isIos && !window.isStandaloneMode()) {
+        if (installState.isIosInstallPath && !window.isStandaloneMode()) {
           window.showToast('En Safari: Compartir → "Añadir a pantalla de inicio".');
         }
       };

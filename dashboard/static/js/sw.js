@@ -2,11 +2,6 @@ const CACHE_NAME = 'bothr-v2';
 
 // Static assets safe to cache (no sensitive data)
 const PRECACHE_URLS = [
-  '/',
-  '/dashboard',
-  '/calendar',
-  '/logs',
-  '/settings',
   '/offline',
   '/manifest.json',
   '/static/css/style.css',
