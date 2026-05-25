@@ -68,23 +68,27 @@ self.addEventListener('fetch', (event) => {
   // Stale-while-revalidate for static assets
   event.respondWith(
     caches.match(event.request).then(async (cached) => {
-      const networkFetch = fetch(event.request)
-        .then((response) => {
-          if (response && response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-          }
-          return response;
-        })
-        .catch(async () => {
-          if (cached) return cached;
-          if (event.request.destination === 'document') {
-            return caches.match('/offline');
-          }
-          return new Response('Offline', { status: 503, statusText: 'Offline' });
-        });
+      if (cached) {
+        event.waitUntil(
+          fetch(event.request)
+            .then((response) => {
+              if (response && response.ok) {
+                const responseClone = response.clone();
+                return caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+              }
+              return undefined;
+            })
+            .catch(() => undefined)
+        );
+        return cached;
+      }
 
-      return cached || networkFetch;
+      return fetch(event.request).catch(async () => {
+        if (event.request.destination === 'document') {
+          return caches.match('/offline');
+        }
+        return new Response('Offline', { status: 503, statusText: 'Offline' });
+      });
     })
   );
 });

@@ -81,6 +81,7 @@
         deferredPrompt: null,
         isIos: /iphone|ipad|ipod/i.test(window.navigator.userAgent || '')
       };
+      const installButtons = [document.getElementById('installAppBtnDesktop'), document.getElementById('installAppBtnMobile')];
 
       window.showToast = function(message, isError = false) {
         const toastEl = document.getElementById('appToast');
@@ -102,7 +103,6 @@
         offlineBanner.classList.toggle('d-none', navigator.onLine);
       };
       window.syncInstallButtons = function() {
-        const installButtons = [document.getElementById('installAppBtnDesktop'), document.getElementById('installAppBtnMobile')];
         const canInstallPrompt = Boolean(installState.deferredPrompt);
         const showIosHint = installState.isIos && !window.isStandaloneMode();
         const shouldShow = !window.isStandaloneMode() && (canInstallPrompt || showIosHint);
@@ -111,7 +111,12 @@
       window.handleInstallAction = async function() {
         if (installState.deferredPrompt) {
           installState.deferredPrompt.prompt();
-          const installResult = await installState.deferredPrompt.userChoice.catch(() => null);
+          let installResult = null;
+          try {
+            installResult = await installState.deferredPrompt.userChoice;
+          } catch (error) {
+            window.showToast('No se pudo completar el diálogo de instalación.', true);
+          }
           installState.deferredPrompt = null;
           if (installResult?.outcome === 'accepted') {
             window.showToast('Instalación iniciada correctamente.');
