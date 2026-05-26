@@ -137,9 +137,6 @@ def refresh(force_file_override: bool = False) -> None:
     invalidate_calendar_cache()
 
 
-refresh()
-
-
 def _load_json_dates(path: Path, key: str) -> set[str]:
     """Load date strings from a JSON file and return them as a set."""
     try:
@@ -159,6 +156,9 @@ def invalidate_calendar_cache() -> None:
     with _calendar_cache_lock:
         _festivos_cache = None
         _jornada_reducida_cache = None
+
+
+refresh()
 
 
 def load_festivos() -> set[str]:
