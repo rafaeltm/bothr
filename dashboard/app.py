@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import Flask, redirect, render_template, send_from_directory, url_for
 
 import config
+from dashboard.auth import auth
 
 app = Flask(__name__)
 
@@ -14,21 +15,25 @@ app.register_blueprint(calendar_bp)
 
 
 @app.get('/')
+@auth.login_required
 def root():
     return redirect(url_for('dashboard'))
 
 
 @app.get('/dashboard')
+@auth.login_required
 def dashboard():
     return render_template('index.html')
 
 
 @app.get('/offline')
+@auth.login_required
 def offline():
     return render_template('offline.html'), 200
 
 
 @app.get('/sw.js')
+@auth.login_required
 def service_worker():
     response = send_from_directory(app.static_folder, 'js/sw.js')
     response.headers['Service-Worker-Allowed'] = '/'
@@ -37,11 +42,11 @@ def service_worker():
 
 
 @app.get('/manifest.json')
+@auth.login_required
 def web_manifest():
     response = send_from_directory(app.static_folder, 'manifest.json')
     response.headers['Cache-Control'] = 'no-cache'
     return response
-
 
 
 def run_dashboard() -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 from datetime import datetime
 
 from telegram import Bot, Update
@@ -28,6 +29,22 @@ async def send_message(chat_id: str | int | None, text: str) -> None:
     if not current_bot or normalized_chat_id is None or normalized_chat_id == '':
         return
     await current_bot.send_message(chat_id=normalized_chat_id, text=text)
+
+
+def send_message_sync(chat_id: str | int | None, text: str) -> None:
+    error: list[Exception] = []
+
+    def _runner() -> None:
+        try:
+            asyncio.run(send_message(chat_id, text))
+        except Exception as exc:  # pragma: no cover - defensive propagation for request context.
+            error.append(exc)
+
+    thread = threading.Thread(target=_runner, daemon=True, name='telegram-sync-send')
+    thread.start()
+    thread.join()
+    if error:
+        raise error[0]
 
 
 def _is_authorized_chat(update: Update) -> bool:

@@ -119,7 +119,7 @@ python -m playwright install
 python main.py
 ```
 
-The root `fichaje.py` file is intentionally kept for history, while the maintained implementation lives in `bot/` and `dashboard/`.
+The root `fichaje.py` file is **deprecated** and kept only for history/compatibility; it is not maintained as runtime logic. The maintained implementation lives in `bot/` and `dashboard/`, and the supported entrypoint is `python main.py`.
 
 ## License
 
