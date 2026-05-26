@@ -7,14 +7,80 @@ Bothr automates daily clock-in and clock-out actions with Playwright and exposes
 ## Quick start with docker-compose
 
 1. Create a `.env` file with the required variables.
-2. Build and start the service:
+2. Generate TLS certificates for your server's IP address (run once):
+
+```bash
+./scripts/gen_certs.sh <YOUR_SERVER_IP>
+# Example: ./scripts/gen_certs.sh 192.168.1.50
+```
+
+3. Build and start the service:
 
 ```bash
 docker-compose up --build -d
 ```
 
-3. Open the dashboard at `http://localhost:5000`.
-4. Dashboard access is transparent at app level because deployment access is expected through VPN/network perimeter controls.
+4. Open the dashboard at `https://<YOUR_SERVER_IP>`.
+5. Dashboard access is transparent at app level because deployment access is expected through VPN/network perimeter controls.
+
+> **Note:** The first time you access the dashboard you will get a browser warning unless you install the generated CA root certificate (`certs/ca.crt`) on your device. See [HTTPS / TLS setup](#https--tls-setup) below for per-OS instructions.
+
+## HTTPS / TLS setup
+
+The stack uses a self-signed CA so that HTTPS works by IP address without any external domain or Let's Encrypt dependency. Nginx terminates TLS on port 443 and proxies traffic to the Flask app internally. Port 80 redirects to HTTPS automatically.
+
+### Generating certificates
+
+```bash
+# Replace with the actual IP of your server
+./scripts/gen_certs.sh 192.168.1.50
+
+# Or pass it via an env variable
+SERVER_IP=192.168.1.50 ./scripts/gen_certs.sh
+```
+
+This creates three files in `certs/` (excluded from git):
+- `ca.crt` — CA root certificate — **install this once on every client device**
+- `server.crt` / `server.key` — used by nginx (no action needed)
+
+### Installing the CA root certificate
+
+Install `certs/ca.crt` on every device that will access the dashboard so the browser shows a valid padlock instead of a warning.
+
+**macOS**
+```bash
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain certs/ca.crt
+```
+
+**Linux (Ubuntu / Debian)**
+```bash
+sudo cp certs/ca.crt /usr/local/share/ca-certificates/bothr-ca.crt
+sudo update-ca-certificates
+```
+
+**Linux (RHEL / Fedora)**
+```bash
+sudo cp certs/ca.crt /etc/pki/ca-trust/source/anchors/bothr-ca.crt
+sudo update-ca-trust
+```
+
+**Windows**
+1. Open `certlm.msc`
+2. Go to **Trusted Root Certification Authorities → Certificates**
+3. Right-click → **All Tasks → Import** → select `certs/ca.crt`
+
+**Android (Chrome)**
+Settings → Security → Install a certificate → CA certificate → select the file.
+
+**iPhone / iPad (Safari)**
+1. Transfer `ca.crt` to the device (AirDrop, email, etc.)
+2. Settings → General → VPN & Device Management → Install Profile
+3. Settings → General → About → Certificate Trust Settings → enable full trust for the bothr CA
+
+### Regenerating certificates
+
+Run `./scripts/gen_certs.sh` again with the new IP, then restart the stack (`docker-compose up -d --no-build`). The CA root certificate you already installed on client devices remains valid — only the server certificate changes, so no re-installation is needed on client devices.
 
 ## Multi-architecture Docker image
 
