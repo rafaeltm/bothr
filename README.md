@@ -14,7 +14,7 @@ docker-compose up --build -d
 ```
 
 3. Open the dashboard at `http://localhost:5000`.
-4. Authenticate with username `admin` and the password defined in `DASHBOARD_PASSWORD` (defaults to `admin`).
+4. Dashboard access is transparent at app level because deployment access is expected through VPN/network perimeter controls.
 
 ## Multi-architecture Docker image
 
