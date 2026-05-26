@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from pathlib import Path
 
 from flask import Blueprint, jsonify, render_template, request
 
@@ -10,10 +9,6 @@ from bot import scheduler
 from dashboard.auth import auth
 
 calendar_bp = Blueprint('calendar_bp', __name__)
-
-
-def _write_calendar_file(path: Path, payload: dict[str, list[str]]) -> None:
-    config.write_json_file(path, payload)
 
 
 def _validate_dates(values: object, field_name: str) -> tuple[list[str] | None, str | None]:
@@ -47,7 +42,7 @@ def save_festivos():
     festivos, error = _validate_dates(payload.get('festivos', []), 'festivos')
     if error:
         return jsonify({'success': False, 'error': error}), 400
-    _write_calendar_file(config.FESTIVOS_FILE, {'festivos': festivos})
+    config.write_json_file(config.FESTIVOS_FILE, {'festivos': festivos})
     config.invalidate_calendar_cache()
     return jsonify({'success': True, 'festivos': festivos})
 
@@ -65,7 +60,7 @@ def save_jornada_reducida():
     dias, error = _validate_dates(payload.get('dias', []), 'jornada reducida')
     if error:
         return jsonify({'success': False, 'error': error}), 400
-    _write_calendar_file(config.JORNADA_REDUCIDA_FILE, {'dias': dias})
+    config.write_json_file(config.JORNADA_REDUCIDA_FILE, {'dias': dias})
     config.invalidate_calendar_cache()
     return jsonify({'success': True, 'dias': dias})
 
