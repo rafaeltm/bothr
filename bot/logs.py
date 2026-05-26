@@ -41,7 +41,8 @@ async def notify_telegram(message: str) -> None:
     try:
         await telegram.send_message(config.CHAT_ID, message)
     except TelegramError:
-        logger.exception('No se pudo enviar el mensaje de Telegram: %s', message[:120])
+        safe_message = message if len(message) <= 120 else f'{message[:120]}... [message truncated]'
+        logger.exception('No se pudo enviar el mensaje de Telegram: %s', safe_message)
 
 
 def _read_recent_log_lines(limit: int) -> list[str]:

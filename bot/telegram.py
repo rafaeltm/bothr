@@ -14,6 +14,7 @@ import config
 _bot_token: str | None = None
 bot: Bot | None = None
 logger = logging.getLogger('bothr')
+_SYNC_SEND_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix='telegram-sync-send')
 
 
 def refresh_bot() -> Bot | None:
@@ -33,12 +34,11 @@ async def send_message(chat_id: str | int | None, text: str) -> None:
 
 
 def send_message_sync(chat_id: str | int | None, text: str) -> None:
-    with ThreadPoolExecutor(max_workers=1, thread_name_prefix='telegram-sync-send') as executor:
-        future = executor.submit(asyncio.run, send_message(chat_id, text))
-        try:
-            future.result()
-        except (RuntimeError, TelegramError):
-            raise
+    future = _SYNC_SEND_EXECUTOR.submit(asyncio.run, send_message(chat_id, text))
+    try:
+        future.result()
+    except (RuntimeError, TelegramError):
+        raise
 
 
 def _is_authorized_chat(update: Update) -> bool:

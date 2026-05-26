@@ -47,7 +47,7 @@ def save_festivos():
     festivos, error = _validate_dates(payload.get('festivos', []), 'festivos')
     if error:
         return jsonify({'success': False, 'error': error}), 400
-    _write_calendar_file(config.FESTIVOS_FILE, {'festivos': festivos or []})
+    _write_calendar_file(config.FESTIVOS_FILE, {'festivos': festivos})
     config.invalidate_calendar_cache()
     return jsonify({'success': True, 'festivos': festivos})
 
@@ -65,7 +65,7 @@ def save_jornada_reducida():
     dias, error = _validate_dates(payload.get('dias', []), 'jornada reducida')
     if error:
         return jsonify({'success': False, 'error': error}), 400
-    _write_calendar_file(config.JORNADA_REDUCIDA_FILE, {'dias': dias or []})
+    _write_calendar_file(config.JORNADA_REDUCIDA_FILE, {'dias': dias})
     config.invalidate_calendar_cache()
     return jsonify({'success': True, 'dias': dias})
 
