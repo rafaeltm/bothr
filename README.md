@@ -14,7 +14,7 @@ docker-compose up --build -d
 ```
 
 3. Open the dashboard at `http://localhost:5000`.
-4. Authenticate with username `admin` and the password defined in `DASHBOARD_PASSWORD` (defaults to `admin`).
+4. Dashboard access is transparent at app level because deployment access is expected through VPN/network perimeter controls.
 
 ## Multi-architecture Docker image
 
@@ -119,7 +119,7 @@ python -m playwright install
 python main.py
 ```
 
-The root `fichaje.py` file is intentionally kept for history, while the maintained implementation lives in `bot/` and `dashboard/`.
+The root `fichaje.py` file is **deprecated** and kept only for history/compatibility; it is not maintained as runtime logic. The maintained implementation lives in `bot/` and `dashboard/`, and the supported entrypoint is `python main.py`.
 
 ## License
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from datetime import time
 from pathlib import Path
 from typing import Any
@@ -48,6 +49,11 @@ JORNADA_REDUCIDA_FILE: Path = DATA_DIR / "jornada_reducida.json"
 PREFERRED_CLOCK_IN: time = time(hour=8, minute=0)
 DASHBOARD_PASSWORD: str = "admin"
 DASHBOARD_PORT: int = 5000
+_file_locks_mutex = threading.Lock()
+_file_locks: dict[Path, threading.RLock] = {}
+_calendar_cache_lock = threading.Lock()
+_festivos_cache: set[str] | None = None
+_jornada_reducida_cache: set[str] | None = None
 
 
 def _resolve_path(value: str | None, default: str) -> Path:
@@ -128,9 +134,7 @@ def refresh(force_file_override: bool = False) -> None:
             "DASHBOARD_PORT": _get_int("DASHBOARD_PORT", 5000),
         }
     )
-
-
-refresh()
+    invalidate_calendar_cache()
 
 
 def _load_json_dates(path: Path, key: str) -> set[str]:
@@ -147,13 +151,31 @@ def _load_json_dates(path: Path, key: str) -> set[str]:
     return {str(item) for item in values}
 
 
+def invalidate_calendar_cache() -> None:
+    global _festivos_cache, _jornada_reducida_cache
+    with _calendar_cache_lock:
+        _festivos_cache = None
+        _jornada_reducida_cache = None
+
+
+refresh()
+
+
 def load_festivos() -> set[str]:
-    return _load_json_dates(FESTIVOS_FILE, 'festivos')
+    global _festivos_cache
+    with _calendar_cache_lock:
+        if _festivos_cache is None:
+            _festivos_cache = _load_json_dates(FESTIVOS_FILE, 'festivos')
+        return set(_festivos_cache)
 
 
 
 def load_jornada_reducida() -> set[str]:
-    return _load_json_dates(JORNADA_REDUCIDA_FILE, 'dias')
+    global _jornada_reducida_cache
+    with _calendar_cache_lock:
+        if _jornada_reducida_cache is None:
+            _jornada_reducida_cache = _load_json_dates(JORNADA_REDUCIDA_FILE, 'dias')
+        return set(_jornada_reducida_cache)
 
 
 
@@ -184,3 +206,31 @@ def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dic
 
 def ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def get_file_lock(path: Path) -> threading.RLock:
+    resolved = path.resolve()
+    with _file_locks_mutex:
+        lock = _file_locks.get(resolved)
+        if lock is None:
+            lock = threading.RLock()
+            _file_locks[resolved] = lock
+    return lock
+
+
+def read_json_file(path: Path, default: Any) -> Any:
+    lock = get_file_lock(path)
+    with lock:
+        try:
+            with path.open('r', encoding='utf-8') as handle:
+                return json.load(handle)
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            return default
+
+
+def write_json_file(path: Path, payload: Any) -> None:
+    lock = get_file_lock(path)
+    with lock:
+        ensure_parent(path)
+        with path.open('w', encoding='utf-8') as handle:
+            json.dump(payload, handle, indent=2, ensure_ascii=False)

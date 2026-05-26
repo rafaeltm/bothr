@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import logging
 from datetime import datetime
 
@@ -12,6 +13,7 @@ import config
 _bot_token: str | None = None
 bot: Bot | None = None
 logger = logging.getLogger('bothr')
+_SYNC_SEND_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix='telegram-sync-send')
 
 
 def refresh_bot() -> Bot | None:
@@ -28,6 +30,11 @@ async def send_message(chat_id: str | int | None, text: str) -> None:
     if not current_bot or normalized_chat_id is None or normalized_chat_id == '':
         return
     await current_bot.send_message(chat_id=normalized_chat_id, text=text)
+
+
+def send_message_sync(chat_id: str | int | None, text: str) -> None:
+    future = _SYNC_SEND_EXECUTOR.submit(asyncio.run, send_message(chat_id, text))
+    future.result()
 
 
 def _is_authorized_chat(update: Update) -> bool:

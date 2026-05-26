@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from playwright.async_api import TimeoutError
 
@@ -26,7 +27,7 @@ def _missing_login_config() -> list[str]:
     return missing
 
 
-async def login(playwright):
+async def login(playwright: Any) -> tuple[Any | None, Any | None]:
     missing = _missing_login_config()
     if missing:
         logger.error('No se puede iniciar sesión por configuración incompleta.')
@@ -60,7 +61,7 @@ async def login(playwright):
     return None, None
 
 
-async def fichar(page, tipo: str = 'entrada') -> bool:
+async def fichar(page: Any, tipo: str = 'entrada') -> bool:
     if not config.ENABLE:
         logger.info('Fichaje de %s deshabilitado por configuración.', tipo)
         return False
