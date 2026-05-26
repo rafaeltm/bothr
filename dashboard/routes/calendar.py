@@ -9,7 +9,7 @@ import config
 from bot import scheduler
 from dashboard.auth import auth
 
-calendar_bp = Blueprint('calendar', __name__)
+calendar_bp = Blueprint('calendar_bp', __name__)
 
 
 def _write_calendar_file(path: Path, payload: dict[str, list[str]]) -> None:

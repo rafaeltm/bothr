@@ -7,6 +7,8 @@ from datetime import datetime
 import config
 
 DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+# Supports timestamps like YYYY-MM-DD HH:MM:SS / YYYY-MM-DDTHH:MM:SS
+# with optional fractional seconds and timezone suffixes (Z, +HHMM, +HH:MM).
 TIMESTAMP_PATTERN = re.compile(r'(?P<timestamp>\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)')
 OFFSET_WITH_COLON_PATTERN = re.compile(r'(?P<hours>[+-]\d{2}):(?P<minutes>\d{2})$')
 ACTION_PATTERN = re.compile(r'\b(entrada|salida)\b')

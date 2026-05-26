@@ -49,7 +49,7 @@ JORNADA_REDUCIDA_FILE: Path = DATA_DIR / "jornada_reducida.json"
 PREFERRED_CLOCK_IN: time = time(hour=8, minute=0)
 DASHBOARD_PASSWORD: str = "admin"
 DASHBOARD_PORT: int = 5000
-_locks_guard = threading.Lock()
+_file_locks_mutex = threading.Lock()
 _file_locks: dict[Path, threading.RLock] = {}
 _festivos_cache: set[str] | None = None
 _jornada_reducida_cache: set[str] | None = None
@@ -206,7 +206,7 @@ def ensure_parent(path: Path) -> None:
 
 def get_file_lock(path: Path) -> threading.RLock:
     resolved = path.resolve()
-    with _locks_guard:
+    with _file_locks_mutex:
         lock = _file_locks.get(resolved)
         if lock is None:
             lock = threading.RLock()
