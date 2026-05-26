@@ -17,6 +17,7 @@ def _write_calendar_file(path: Path, payload: dict[str, list[str]]) -> None:
 
 
 def _validate_dates(values: object, field_name: str) -> tuple[list[str] | None, str | None]:
+    """Validate YYYY-MM-DD strings and return (normalized_values, error_message)."""
     if not isinstance(values, list):
         return None, f'Formato inválido para {field_name}.'
 

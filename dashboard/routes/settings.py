@@ -15,6 +15,7 @@ logger = logging.getLogger('bothr')
 
 
 def _stringify_value(value: object) -> str:
+    """Serialize in-memory setting values into .env-compatible strings."""
     if isinstance(value, bool):
         return 'true' if value else 'false'
     return '' if value is None else str(value)

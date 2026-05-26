@@ -6,6 +6,7 @@ from typing import Any
 
 import config
 from bot import telegram
+from telegram.error import TelegramError
 
 LOG_FILE = config.LOGS_DIR / 'general.log'
 ERROR_STATE_FILE = config.DATA_DIR / 'error_state.json'
@@ -39,7 +40,7 @@ def log_event(message: str, level: int = logging.INFO) -> None:
 async def notify_telegram(message: str) -> None:
     try:
         await telegram.send_message(config.CHAT_ID, message)
-    except Exception:
+    except TelegramError:
         logger.exception('No se pudo enviar el mensaje de Telegram: %s', message[:120])
 
 

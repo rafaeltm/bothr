@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import logging
-import threading
 from datetime import datetime
 
 from telegram import Bot, Update
+from telegram.error import TelegramError
 from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes
 
 import config
@@ -32,19 +33,12 @@ async def send_message(chat_id: str | int | None, text: str) -> None:
 
 
 def send_message_sync(chat_id: str | int | None, text: str) -> None:
-    error: list[Exception] = []
-
-    def _runner() -> None:
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix='telegram-sync-send') as executor:
+        future = executor.submit(asyncio.run, send_message(chat_id, text))
         try:
-            asyncio.run(send_message(chat_id, text))
-        except Exception as exc:  # pragma: no cover - defensive propagation for request context.
-            error.append(exc)
-
-    thread = threading.Thread(target=_runner, daemon=True, name='telegram-sync-send')
-    thread.start()
-    thread.join()
-    if error:
-        raise error[0]
+            future.result()
+        except (RuntimeError, TelegramError):
+            raise
 
 
 def _is_authorized_chat(update: Update) -> bool:

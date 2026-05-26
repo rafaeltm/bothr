@@ -51,6 +51,7 @@ DASHBOARD_PASSWORD: str = "admin"
 DASHBOARD_PORT: int = 5000
 _file_locks_mutex = threading.Lock()
 _file_locks: dict[Path, threading.RLock] = {}
+_calendar_cache_lock = threading.Lock()
 _festivos_cache: set[str] | None = None
 _jornada_reducida_cache: set[str] | None = None
 
@@ -155,23 +156,26 @@ def _load_json_dates(path: Path, key: str) -> set[str]:
 
 def invalidate_calendar_cache() -> None:
     global _festivos_cache, _jornada_reducida_cache
-    _festivos_cache = None
-    _jornada_reducida_cache = None
+    with _calendar_cache_lock:
+        _festivos_cache = None
+        _jornada_reducida_cache = None
 
 
 def load_festivos() -> set[str]:
     global _festivos_cache
-    if _festivos_cache is None:
-        _festivos_cache = _load_json_dates(FESTIVOS_FILE, 'festivos')
-    return set(_festivos_cache)
+    with _calendar_cache_lock:
+        if _festivos_cache is None:
+            _festivos_cache = _load_json_dates(FESTIVOS_FILE, 'festivos')
+        return set(_festivos_cache)
 
 
 
 def load_jornada_reducida() -> set[str]:
     global _jornada_reducida_cache
-    if _jornada_reducida_cache is None:
-        _jornada_reducida_cache = _load_json_dates(JORNADA_REDUCIDA_FILE, 'dias')
-    return set(_jornada_reducida_cache)
+    with _calendar_cache_lock:
+        if _jornada_reducida_cache is None:
+            _jornada_reducida_cache = _load_json_dates(JORNADA_REDUCIDA_FILE, 'dias')
+        return set(_jornada_reducida_cache)
 
 
 
