@@ -103,6 +103,10 @@
             </div>
           </div>
         </div>
+        <div class="status-box mt-3">
+          <div class="text-muted small">⏭️ Próximo registro previsto</div>
+          <div class="fs-6 fw-semibold" id="teamleaderNextEntry">-</div>
+        </div>
         <div class="row g-3 mt-1">
           <div class="col-12">
             <h3 class="h6 mb-2">Añadir registro Teamleader</h3>
@@ -168,6 +172,15 @@
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}h`;
   }
 
+  function formatTeamleaderNextEntry(preview) {
+    if (!preview || !preview.date) return '-';
+    const startedAt = String(preview.started_at || '');
+    const hhmm = startedAt.length >= 16 ? startedAt.slice(11, 16) : '--:--';
+    const hours = Number(preview.hours);
+    const hoursLabel = Number.isFinite(hours) ? `${hours}h` : '-';
+    return `${preview.date} · ${hhmm} · ${hoursLabel}`;
+  }
+
   function setTeamleaderUnavailable(message) {
     teamleaderAvailable = false;
     document.getElementById('teamleaderStatusBadge').textContent = message || 'No disponible';
@@ -176,6 +189,7 @@
     document.getElementById('teamleaderTodayHours').textContent = '-';
     document.getElementById('teamleaderPeriodTotal').textContent = '-';
     document.getElementById('teamleaderPeriodRange').textContent = '-';
+    document.getElementById('teamleaderNextEntry').textContent = '-';
     document.getElementById('teamleaderAddEntryBtn').disabled = true;
   }
 
@@ -197,6 +211,7 @@
       document.getElementById('teamleaderPeriodTotal').textContent = formatDuration(summary.total_seconds);
       document.getElementById('teamleaderPeriodRange').textContent =
         `${summary.period_label || '-'} · ${summary.from || '-'} → ${summary.to || '-'}`;
+      document.getElementById('teamleaderNextEntry').textContent = formatTeamleaderNextEntry(summary.next_entry_preview);
     } catch (error) {
       setTeamleaderUnavailable('No disponible');
       if (showErrorToast) {
