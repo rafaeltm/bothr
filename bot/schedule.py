@@ -17,6 +17,10 @@ def es_festivo(reference: datetime | None = None) -> bool:
     return now.weekday() >= 5 or today_str in config.load_festivos()
 
 
+def is_working_day(reference: datetime) -> bool:
+    return not es_festivo(reference)
+
+
 def _get_work_hours(reference: datetime) -> int:
     today_str = reference.strftime('%Y-%m-%d')
     if reference.weekday() == 4 or today_str in config.load_jornada_reducida() or 6 <= reference.month <= 9:
@@ -42,7 +46,7 @@ def _get_daily_clock_out_time(reference: datetime) -> time:
 
 def get_fichaje_hours(reference: datetime | None = None) -> dict[str, time] | None:
     now = reference or datetime.now(config.TZ)
-    if now.weekday() >= 5 or now.strftime('%Y-%m-%d') in config.load_festivos():
+    if not is_working_day(now):
         return None
 
     clock_in_time = _get_daily_clock_in_time(now)
