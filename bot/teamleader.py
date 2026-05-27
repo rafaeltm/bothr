@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import threading
 from datetime import datetime, timedelta, timezone
@@ -17,6 +18,7 @@ _oauth_states_lock = threading.Lock()
 _oauth_states: dict[str, datetime] = {}
 _last_error_lock = threading.Lock()
 _last_error_message: str | None = None
+_PUBLIC_ERROR_ALLOWED_PATTERN = re.compile(r'^[\w\s.,:;()\-_/]+$')
 
 
 class TeamleaderError(RuntimeError):
@@ -33,6 +35,10 @@ def _sanitize_public_error(message: str, fallback: str) -> str:
     lowered = first_line.lower()
     if 'traceback' in lowered or 'file "' in lowered or lowered.startswith('line '):
         return fallback
+    if 'password' in lowered or 'secret' in lowered or 'token' in lowered or '://' in first_line:
+        return fallback
+    if not _PUBLIC_ERROR_ALLOWED_PATTERN.match(first_line):
+        return fallback
     return first_line[:_MAX_PUBLIC_ERROR_LENGTH]
 
 
@@ -44,9 +50,12 @@ def _set_last_error_message(message: str, fallback: str) -> None:
 
 
 def get_last_error_message(fallback: str) -> str:
+    global _last_error_message
     with _last_error_lock:
         if _last_error_message:
-            return _last_error_message
+            message = _last_error_message
+            _last_error_message = None
+            return message
     return fallback
 
 
