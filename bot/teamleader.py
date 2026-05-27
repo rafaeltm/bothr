@@ -6,7 +6,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 import config
@@ -24,9 +24,22 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+_ALLOWED_TEAMLEADER_HOSTNAMES = {
+    'teamleader.eu',
+    'app.teamleader.eu',
+    'api.focus.teamleader.eu',
+}
+
+
 def _normalize_base_url(url: str | None, fallback: str) -> str:
-    value = (url or fallback).strip()
-    return value.rstrip('/')
+    value = (url or fallback).strip().rstrip('/')
+    parsed = urlparse(value)
+    if parsed.scheme != 'https':
+        raise TeamleaderError('La URL base de Teamleader debe usar el esquema https.')
+    host = parsed.netloc.split(':')[0].lower()
+    if host not in _ALLOWED_TEAMLEADER_HOSTNAMES and not host.endswith('.teamleader.eu'):
+        raise TeamleaderError('La URL base de Teamleader debe ser un dominio oficial de Teamleader (teamleader.eu).')
+    return value
 
 
 def _parse_json_response(response_body: bytes) -> dict[str, Any]:

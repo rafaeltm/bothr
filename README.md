@@ -109,6 +109,7 @@ This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both st
 | `PREFERRED_CLOCK_IN` | No | Preferred reference time used to calculate planned exit time; planned entry applies a daily ±15 minute margin around it. Default: `08:00`. |
 | `DASHBOARD_PASSWORD` | No | HTTP Basic Auth password for the dashboard. Default: `admin`. |
 | `DASHBOARD_PORT` | No | Flask dashboard port. Default: `5000`. |
+| `TEAMLEADER_ENABLED` | No | Enables Teamleader integration. Default: `false`. |
 | `TEAMLEADER_CLIENT_ID` | No | Teamleader OAuth client ID. Required to connect Teamleader. |
 | `TEAMLEADER_CLIENT_SECRET` | No | Teamleader OAuth client secret. Required to connect Teamleader. |
 | `TEAMLEADER_REDIRECT_URI` | No | OAuth callback URL (must point to `/api/integrations/teamleader/callback`). |

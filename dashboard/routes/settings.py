@@ -228,7 +228,10 @@ def _normalize_iso_datetime(raw_value: str) -> datetime:
     normalized = raw_value.strip()
     if not normalized:
         raise ValueError('empty')
-    return datetime.fromisoformat(normalized.replace('Z', '+00:00'))
+    parsed = datetime.fromisoformat(normalized.replace('Z', '+00:00'))
+    if parsed.tzinfo is None:
+        raise ValueError('missing timezone')
+    return parsed
 
 
 @settings_bp.get('/api/integrations/teamleader/entries')
