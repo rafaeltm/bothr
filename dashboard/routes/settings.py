@@ -231,6 +231,15 @@ def _parse_iso_date(raw_value: str) -> date:
     return date.fromisoformat(normalized)
 
 
+def _safe_teamleader_error_message(exc: Exception, fallback: str) -> str:
+    message = str(exc).strip()
+    if not message:
+        return fallback
+    if 'traceback' in message.lower():
+        return fallback
+    return message.splitlines()[0][:300]
+
+
 @settings_bp.get('/api/integrations/teamleader/entries')
 @auth.login_required
 def teamleader_entries():
@@ -257,7 +266,14 @@ def teamleader_entries():
         return jsonify({'success': True, 'entries': entries, 'settings': _get_form_settings()})
     except teamleader.TeamleaderError as exc:
         logger.warning('Error al obtener fichajes de Teamleader: %s', exc)
-        return jsonify({'success': False, 'error': str(exc)}), 400
+        return jsonify(
+            {
+                'success': False,
+                'error': _safe_teamleader_error_message(
+                    exc, 'No se pudieron obtener los fichajes de Teamleader.'
+                ),
+            }
+        ), 400
     except Exception:
         logger.exception('No se pudieron obtener los fichajes de Teamleader.')
         return jsonify({'success': False, 'error': 'No se pudieron obtener los fichajes de Teamleader.'}), 500
@@ -359,7 +375,14 @@ def teamleader_analysis():
         )
     except teamleader.TeamleaderError as exc:
         logger.warning('Error al calcular análisis de Teamleader: %s', exc)
-        return jsonify({'success': False, 'error': str(exc)}), 400
+        return jsonify(
+            {
+                'success': False,
+                'error': _safe_teamleader_error_message(
+                    exc, 'No se pudo calcular el análisis de horas de Teamleader.'
+                ),
+            }
+        ), 400
     except Exception:
         logger.exception('No se pudo calcular el análisis de horas de Teamleader.')
         return jsonify({'success': False, 'error': 'No se pudo calcular el análisis de horas de Teamleader.'}), 500
