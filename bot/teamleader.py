@@ -4,7 +4,7 @@ import json
 import re
 import secrets
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
@@ -269,8 +269,9 @@ def _to_datetime_str(date_str: str, end_of_day: bool = False) -> str:
     """
     if 'T' in date_str or ' ' in date_str:
         return date_str
-    time_part = 'T23:59:59+00:00' if end_of_day else 'T00:00:00+00:00'
-    return date_str + time_part
+    local_date = datetime.fromisoformat(date_str.strip()).date()
+    local_time = time.max.replace(microsecond=0) if end_of_day else time.min
+    return datetime.combine(local_date, local_time, tzinfo=config.TZ).isoformat()
 
 
 def list_time_entries(started_after: str, started_before: str) -> tuple[list[dict[str, Any]], dict[str, str]]:
