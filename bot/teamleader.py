@@ -16,9 +16,9 @@ _STATE_TTL = timedelta(minutes=10)
 _MAX_PUBLIC_ERROR_LENGTH = 300
 _oauth_states_lock = threading.Lock()
 _oauth_states: dict[str, datetime] = {}
-_last_error_lock = threading.Lock()
-_last_error_message: str | None = None
-_PUBLIC_ERROR_ALLOWED_PATTERN = re.compile(r'^[\w\s.,:;()\-_/]+$')
+_last_error_state = threading.local()
+_STACK_TRACE_MARKERS = ('traceback', 'file "', 'line ')
+_PUBLIC_ERROR_ALLOWED_PATTERN = re.compile(r'^[\w\s.,:;()\-_/!?]+$')
 
 
 class TeamleaderError(RuntimeError):
@@ -33,7 +33,7 @@ def _sanitize_public_error(message: str, fallback: str) -> str:
     if not first_line:
         return fallback
     lowered = first_line.lower()
-    if 'traceback' in lowered or 'file "' in lowered or lowered.startswith('line '):
+    if any(marker in lowered for marker in _STACK_TRACE_MARKERS):
         return fallback
     if 'password' in lowered or 'secret' in lowered or 'token' in lowered or '://' in first_line:
         return fallback
@@ -43,20 +43,14 @@ def _sanitize_public_error(message: str, fallback: str) -> str:
 
 
 def _set_last_error_message(message: str, fallback: str) -> None:
-    global _last_error_message
     safe_message = _sanitize_public_error(message, fallback)
-    with _last_error_lock:
-        _last_error_message = safe_message
+    _last_error_state.message = safe_message
 
 
 def get_last_error_message(fallback: str) -> str:
-    global _last_error_message
-    with _last_error_lock:
-        if _last_error_message:
-            message = _last_error_message
-            _last_error_message = None
-            return message
-    return fallback
+    message = getattr(_last_error_state, 'message', None)
+    _last_error_state.message = None
+    return message or fallback
 
 
 def _utc_now() -> datetime:
