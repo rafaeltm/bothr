@@ -14,7 +14,7 @@ STANDARD_WORK_HOURS = 9
 def es_festivo(reference: datetime | None = None) -> bool:
     now = reference or datetime.now(config.TZ)
     today_str = now.strftime('%Y-%m-%d')
-    return now.weekday() >= 5 or today_str in config.load_festivos()
+    return now.weekday() >= 5 or today_str in config.load_festivos() or today_str in config.load_vacaciones()
 
 
 def is_working_day(reference: datetime) -> bool:

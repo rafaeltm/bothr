@@ -65,6 +65,24 @@ def save_jornada_reducida():
     return jsonify({'success': True, 'dias': dias})
 
 
+@calendar_bp.get('/api/vacaciones')
+@auth.login_required
+def get_vacaciones():
+    return jsonify({'dias': sorted(config.load_vacaciones())})
+
+
+@calendar_bp.post('/api/vacaciones')
+@auth.login_required
+def save_vacaciones():
+    payload = request.get_json(silent=True) or {}
+    dias, error = _validate_dates(payload.get('dias', []), 'vacaciones')
+    if error:
+        return jsonify({'success': False, 'error': error}), 400
+    config.write_json_file(config.VACACIONES_FILE, {'dias': dias})
+    config.invalidate_calendar_cache()
+    return jsonify({'success': True, 'dias': dias})
+
+
 @calendar_bp.get('/api/status')
 @auth.login_required
 def get_status():

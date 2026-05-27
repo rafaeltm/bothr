@@ -86,10 +86,11 @@ def test_connection() -> dict[str, Any]:
     return _http_get(f'{base_url}/4/myself', token)
 
 
-def list_worklogs(from_date: str, to_date: str) -> list[dict[str, Any]]:
+def list_worklogs(from_date: str, to_date: str, issue_key: str | None = None) -> list[dict[str, Any]]:
     """Return Tempo worklogs for the authenticated user in [from_date, to_date].
 
-    Both dates must be YYYY-MM-DD strings.  Pagination is handled automatically.
+    Both dates must be YYYY-MM-DD strings.  If issue_key is provided only worklogs
+    for that Jira issue are returned.  Pagination is handled automatically.
     """
     token = _get_token()
     base_url = _normalize_base_url(config.JIRA_TEMPO_BASE_URL, 'https://api.tempo.io')
@@ -99,13 +100,15 @@ def list_worklogs(from_date: str, to_date: str) -> list[dict[str, Any]]:
     offset = 0
 
     while True:
-        params = urlencode({
+        params: dict[str, object] = {
             'from': from_date,
             'to': to_date,
             'limit': limit,
             'offset': offset,
-        })
-        url = f'{base_url}/4/worklogs?{params}'
+        }
+        if issue_key:
+            params['issue'] = issue_key
+        url = f'{base_url}/4/worklogs?{urlencode(params)}'
         payload = _http_get(url, token)
 
         results_page = payload.get('results')

@@ -48,8 +48,11 @@ MANAGED_ENV_KEYS = [
     "JIRA_ENABLED",
     "JIRA_TEMPO_BASE_URL",
     "JIRA_TEMPO_API_TOKEN",
+    "JIRA_WORK_ISSUE",
+    "JIRA_VACATION_ISSUE",
     "JIRA_WORKDAY_START",
     "JIRA_WORKDAY_END",
+    "VACACIONES_FILE",
 ]
 SENSITIVE_ENV_KEYS = {
     "PASSWORD",
@@ -73,6 +76,7 @@ LOGIN_URL: str | None = None
 FICHAJE_FILE: Path = DATA_DIR / "fichaje.json"
 FESTIVOS_FILE: Path = DATA_DIR / "festivos.json"
 JORNADA_REDUCIDA_FILE: Path = DATA_DIR / "jornada_reducida.json"
+VACACIONES_FILE: Path = DATA_DIR / "vacaciones.json"
 PREFERRED_CLOCK_IN: time = time(hour=8, minute=0)
 DASHBOARD_PASSWORD: str = "admin"
 DASHBOARD_PORT: int = 5000
@@ -92,6 +96,8 @@ TEAMLEADER_WORKDAY_END: str = "17:00"
 JIRA_ENABLED: bool = False
 JIRA_TEMPO_BASE_URL: str = "https://api.tempo.io"
 JIRA_TEMPO_API_TOKEN: str | None = None
+JIRA_WORK_ISSUE: str | None = None
+JIRA_VACATION_ISSUE: str | None = None
 JIRA_WORKDAY_START: str = "08:00"
 JIRA_WORKDAY_END: str = "17:00"
 _file_locks_mutex = threading.Lock()
@@ -99,6 +105,7 @@ _file_locks: dict[Path, threading.RLock] = {}
 _calendar_cache_lock = threading.Lock()
 _festivos_cache: set[str] | None = None
 _jornada_reducida_cache: set[str] | None = None
+_vacaciones_cache: set[str] | None = None
 
 
 def _resolve_path(value: str | None, default: str) -> Path:
@@ -174,6 +181,7 @@ def refresh(force_file_override: bool = False) -> None:
                 os.getenv("JORNADA_REDUCIDA_FILE"),
                 "data/jornada_reducida.json",
             ),
+            "VACACIONES_FILE": _resolve_path(os.getenv("VACACIONES_FILE"), "data/vacaciones.json"),
             "PREFERRED_CLOCK_IN": _get_time("PREFERRED_CLOCK_IN", time(hour=8, minute=0)),
             "DASHBOARD_PASSWORD": os.getenv("DASHBOARD_PASSWORD") or "admin",
             "DASHBOARD_PORT": _get_int("DASHBOARD_PORT", 5000),
@@ -195,6 +203,8 @@ def refresh(force_file_override: bool = False) -> None:
             "JIRA_ENABLED": _get_bool("JIRA_ENABLED", default=False),
             "JIRA_TEMPO_BASE_URL": os.getenv("JIRA_TEMPO_BASE_URL") or "https://api.tempo.io",
             "JIRA_TEMPO_API_TOKEN": os.getenv("JIRA_TEMPO_API_TOKEN") or None,
+            "JIRA_WORK_ISSUE": os.getenv("JIRA_WORK_ISSUE") or None,
+            "JIRA_VACATION_ISSUE": os.getenv("JIRA_VACATION_ISSUE") or None,
             "JIRA_WORKDAY_START": os.getenv("JIRA_WORKDAY_START") or "08:00",
             "JIRA_WORKDAY_END": os.getenv("JIRA_WORKDAY_END") or "17:00",
         }
@@ -217,10 +227,11 @@ def _load_json_dates(path: Path, key: str) -> set[str]:
 
 
 def invalidate_calendar_cache() -> None:
-    global _festivos_cache, _jornada_reducida_cache
+    global _festivos_cache, _jornada_reducida_cache, _vacaciones_cache
     with _calendar_cache_lock:
         _festivos_cache = None
         _jornada_reducida_cache = None
+        _vacaciones_cache = None
 
 
 refresh()
@@ -244,6 +255,15 @@ def load_jornada_reducida() -> set[str]:
 
 
 
+def load_vacaciones() -> set[str]:
+    global _vacaciones_cache
+    with _calendar_cache_lock:
+        if _vacaciones_cache is None:
+            _vacaciones_cache = _load_json_dates(VACACIONES_FILE, 'dias')
+        return set(_vacaciones_cache)
+
+
+
 def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dict[str, Any]:
     values: dict[str, Any] = {
         'USERNAME': USERNAME or '',
@@ -257,6 +277,7 @@ def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dic
         'FICHAJE_FILE': str(FICHAJE_FILE),
         'FESTIVOS_FILE': str(FESTIVOS_FILE),
         'JORNADA_REDUCIDA_FILE': str(JORNADA_REDUCIDA_FILE),
+        'VACACIONES_FILE': str(VACACIONES_FILE),
         'PREFERRED_CLOCK_IN': PREFERRED_CLOCK_IN.strftime('%H:%M'),
         'DASHBOARD_PASSWORD': DASHBOARD_PASSWORD or '',
         'DASHBOARD_PORT': DASHBOARD_PORT,
@@ -276,6 +297,8 @@ def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dic
         'JIRA_ENABLED': JIRA_ENABLED,
         'JIRA_TEMPO_BASE_URL': JIRA_TEMPO_BASE_URL or '',
         'JIRA_TEMPO_API_TOKEN': JIRA_TEMPO_API_TOKEN or '',
+        'JIRA_WORK_ISSUE': JIRA_WORK_ISSUE or '',
+        'JIRA_VACATION_ISSUE': JIRA_VACATION_ISSUE or '',
         'JIRA_WORKDAY_START': JIRA_WORKDAY_START or '',
         'JIRA_WORKDAY_END': JIRA_WORKDAY_END or '',
     }

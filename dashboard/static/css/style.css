@@ -296,6 +296,11 @@ body.standalone-mode .mobile-header {
   border-color: rgba(255, 193, 7, 0.7);
 }
 
+.calendar-day.is-vacaciones {
+  background: rgba(13, 202, 240, 0.15);
+  border-color: rgba(13, 202, 240, 0.6);
+}
+
 .calendar-day.is-other-month {
   opacity: 0.35;
   cursor: default;

@@ -397,8 +397,8 @@ def jira_test():
     try:
         result = jira_module.test_connection()
         return jsonify({'success': True, 'message': 'Conexión con Tempo verificada.', 'account': result})
-    except jira_module.JiraError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+    except jira_module.JiraError:
+        return jsonify({'success': False, 'error': 'No se pudo verificar la conexión con Tempo.'}), 400
     except Exception:
         logger.exception('No se pudo verificar la conexión con Tempo.')
         return jsonify({'success': False, 'error': 'No se pudo verificar la conexión con Tempo.'}), 500
@@ -416,10 +416,21 @@ def jira_worklogs():
         return jsonify({'success': False, 'error': 'Debes informar from y to en formato YYYY-MM-DD.'}), 400
 
     try:
-        worklogs = jira_module.list_worklogs(from_param, to_param)
-        return jsonify({'success': True, 'worklogs': worklogs})
-    except jira_module.JiraError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+        work_issue = config.JIRA_WORK_ISSUE or None
+        vacation_issue = config.JIRA_VACATION_ISSUE or None
+        work_worklogs = jira_module.list_worklogs(from_param, to_param, issue_key=work_issue)
+        vacation_worklogs = (
+            jira_module.list_worklogs(from_param, to_param, issue_key=vacation_issue)
+            if vacation_issue
+            else []
+        )
+        return jsonify({
+            'success': True,
+            'work_worklogs': work_worklogs,
+            'vacation_worklogs': vacation_worklogs,
+        })
+    except jira_module.JiraError:
+        return jsonify({'success': False, 'error': 'No se pudieron obtener los worklogs de Tempo.'}), 400
     except Exception:
         logger.exception('No se pudieron obtener los worklogs de Tempo.')
         return jsonify({'success': False, 'error': 'No se pudieron obtener los worklogs de Tempo.'}), 500
@@ -462,10 +473,27 @@ def jira_analysis():
         return jsonify({'success': False, 'error': 'La jornada debe tener fin posterior al inicio.'}), 400
 
     try:
-        worklogs = jira_module.list_worklogs(from_param, to_param)
-        total_clocked_seconds = sum(
-            int(w.get('timeSpentSeconds') or 0) for w in worklogs if isinstance(w, dict)
+        work_issue = config.JIRA_WORK_ISSUE or None
+        vacation_issue = config.JIRA_VACATION_ISSUE or None
+        work_worklogs = jira_module.list_worklogs(from_param, to_param, issue_key=work_issue)
+        vacation_worklogs = (
+            jira_module.list_worklogs(from_param, to_param, issue_key=vacation_issue)
+            if vacation_issue
+            else []
         )
+
+        work_clocked_seconds = sum(
+            int(w.get('timeSpentSeconds') or 0) for w in work_worklogs if isinstance(w, dict)
+        )
+        vacation_clocked_seconds = sum(
+            int(w.get('timeSpentSeconds') or 0) for w in vacation_worklogs if isinstance(w, dict)
+        )
+        vacation_days_used = (
+            round(vacation_clocked_seconds / expected_daily_seconds, 2)
+            if expected_daily_seconds > 0
+            else 0
+        )
+
         working_days = sum(
             1
             for day_offset in range((to_date.date() - from_date.date()).days + 1)
@@ -485,14 +513,17 @@ def jira_analysis():
                     'working_days': working_days,
                     'expected_daily_seconds': expected_daily_seconds,
                     'expected_total_seconds': expected_total_seconds,
-                    'clocked_total_seconds': total_clocked_seconds,
-                    'balance_seconds': total_clocked_seconds - expected_total_seconds,
+                    'work_clocked_seconds': work_clocked_seconds,
+                    'work_balance_seconds': work_clocked_seconds - expected_total_seconds,
+                    'vacation_clocked_seconds': vacation_clocked_seconds,
+                    'vacation_days_used': vacation_days_used,
                 },
-                'worklogs_count': len(worklogs),
+                'work_worklogs_count': len(work_worklogs),
+                'vacation_worklogs_count': len(vacation_worklogs),
             }
         )
-    except jira_module.JiraError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+    except jira_module.JiraError:
+        return jsonify({'success': False, 'error': 'No se pudo calcular el análisis de horas de Tempo.'}), 400
     except Exception:
         logger.exception('No se pudo calcular el análisis de horas de Tempo.')
         return jsonify({'success': False, 'error': 'No se pudo calcular el análisis de horas de Tempo.'}), 500

@@ -4,6 +4,7 @@ const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Juli
 let currentDate = new Date();
 let festivos = new Set();
 let jornadaReducida = new Set();
+let vacaciones = new Set();
 let lastSelectedDate = null;
 
 function formatDate(date) {
@@ -16,6 +17,7 @@ function formatDate(date) {
 function getState(dateString) {
   if (festivos.has(dateString)) return 'festivo';
   if (jornadaReducida.has(dateString)) return 'jornada_reducida';
+  if (vacaciones.has(dateString)) return 'vacaciones';
   return 'none';
 }
 
@@ -54,12 +56,19 @@ function cycleDateState(dateString, renderAfterUpdate = true) {
   if (state === 'none') {
     festivos.add(dateString);
     jornadaReducida.delete(dateString);
+    vacaciones.delete(dateString);
   } else if (state === 'festivo') {
     festivos.delete(dateString);
     jornadaReducida.add(dateString);
+    vacaciones.delete(dateString);
+  } else if (state === 'jornada_reducida') {
+    festivos.delete(dateString);
+    jornadaReducida.delete(dateString);
+    vacaciones.add(dateString);
   } else {
     festivos.delete(dateString);
     jornadaReducida.delete(dateString);
+    vacaciones.delete(dateString);
   }
   if (renderAfterUpdate) renderCalendar();
 }
@@ -117,6 +126,7 @@ function renderCalendar() {
     }
     if (state === 'festivo') cell.classList.add('is-festivo');
     if (state === 'jornada_reducida') cell.classList.add('is-reducida');
+    if (state === 'vacaciones') cell.classList.add('is-vacaciones');
     cell.innerHTML = `
       <div class="fw-semibold">${day}</div>
       <div class="small mt-2">${
@@ -126,7 +136,9 @@ function renderCalendar() {
             ? 'Festivo'
             : state === 'jornada_reducida'
               ? 'Jornada reducida'
-              : 'Normal'
+              : state === 'vacaciones'
+                ? 'Vacaciones'
+                : 'Normal'
       }</div>
     `;
     if (!isWeekend) {
@@ -137,23 +149,27 @@ function renderCalendar() {
 }
 
 async function loadCalendarData() {
-  const [festivosResponse, reducidaResponse] = await Promise.all([
+  const [festivosResponse, reducidaResponse, vacacionesResponse] = await Promise.all([
     fetch('/api/festivos'),
-    fetch('/api/jornada_reducida')
+    fetch('/api/jornada_reducida'),
+    fetch('/api/vacaciones')
   ]);
 
   const festivosData = await festivosResponse.json();
   const reducidaData = await reducidaResponse.json();
+  const vacacionesData = await vacacionesResponse.json();
   festivos = new Set(sanitizeWorkdays(festivosData.festivos));
   jornadaReducida = new Set(sanitizeWorkdays(reducidaData.dias));
+  vacaciones = new Set(sanitizeWorkdays(vacacionesData.dias));
   renderCalendar();
 }
 
 async function saveCalendarData() {
   const festivosPayload = { festivos: sanitizeWorkdays(Array.from(festivos)).sort() };
   const reducidaPayload = { dias: sanitizeWorkdays(Array.from(jornadaReducida)).sort() };
+  const vacacionesPayload = { dias: sanitizeWorkdays(Array.from(vacaciones)).sort() };
 
-  const [festivosResponse, reducidaResponse] = await Promise.all([
+  const [festivosResponse, reducidaResponse, vacacionesResponse] = await Promise.all([
     fetch('/api/festivos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -163,6 +179,11 @@ async function saveCalendarData() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(reducidaPayload)
+    }),
+    fetch('/api/vacaciones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(vacacionesPayload)
     })
   ]);
 
@@ -172,12 +193,16 @@ async function saveCalendarData() {
   if (!reducidaResponse.ok) {
     throw new Error('No se pudo guardar la jornada reducida.');
   }
+  if (!vacacionesResponse.ok) {
+    throw new Error('No se pudieron guardar las vacaciones.');
+  }
 }
 
 function exportCalendarData() {
   const data = {
     festivos: Array.from(festivos).sort(),
-    dias: Array.from(jornadaReducida).sort()
+    dias: Array.from(jornadaReducida).sort(),
+    vacaciones: Array.from(vacaciones).sort()
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
@@ -194,6 +219,7 @@ function importCalendarData(file) {
       const data = JSON.parse(reader.result);
       festivos = new Set(sanitizeWorkdays(data.festivos));
       jornadaReducida = new Set(sanitizeWorkdays(data.dias));
+      vacaciones = new Set(sanitizeWorkdays(data.vacaciones));
       renderCalendar();
       window.showToast('Calendario importado correctamente.');
     } catch (error) {

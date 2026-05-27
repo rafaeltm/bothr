@@ -228,6 +228,21 @@
             <div class="form-text">Token de API de Tempo (Jira). Se genera en Tempo &gt; Configuración &gt; API Integration.</div>
           </div>
           <div class="col-md-4">
+            <label class="form-label">JIRA_WORK_ISSUE</label>
+            <input class="form-control" name="JIRA_WORK_ISSUE" value="{{ settings.JIRA_WORK_ISSUE }}" placeholder="PROJ-123">
+            <div class="form-text">Issue de Jira para registrar <strong>horas de trabajo</strong>. Déjalo vacío para obtener todos los worklogs sin filtrar.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">JIRA_VACATION_ISSUE</label>
+            <input class="form-control" name="JIRA_VACATION_ISSUE" value="{{ settings.JIRA_VACATION_ISSUE }}" placeholder="PROJ-456">
+            <div class="form-text">Issue de Jira para registrar <strong>vacaciones</strong>. Déjalo vacío si no usas un ticket de vacaciones.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">VACACIONES_FILE</label>
+            <input class="form-control" name="VACACIONES_FILE" value="{{ settings.VACACIONES_FILE }}">
+            <div class="form-text">Ruta al JSON con los días de vacaciones del calendario.</div>
+          </div>
+          <div class="col-md-4">
             <label class="form-label">JIRA_WORKDAY_START (HH:MM)</label>
             <input class="form-control" type="time" name="JIRA_WORKDAY_START" value="{{ settings.JIRA_WORKDAY_START }}">
             <div class="form-text">Hora exacta de inicio de jornada para el análisis de horas en Jira/Tempo.</div>
@@ -505,9 +520,12 @@
       if (!worklogsResponse.ok || !worklogsData.success) {
         throw new Error(worklogsData.error || 'No se pudieron obtener los worklogs de Tempo.');
       }
-      const worklogs = Array.isArray(worklogsData.worklogs) ? worklogsData.worklogs : [];
-      document.getElementById('jiraWorklogsSummary').textContent = `Worklogs obtenidos: ${worklogs.length}`;
-      document.getElementById('jiraWorklogsBox').textContent = JSON.stringify(worklogs, null, 2);
+      const workWorklogs = Array.isArray(worklogsData.work_worklogs) ? worklogsData.work_worklogs : [];
+      const vacationWorklogs = Array.isArray(worklogsData.vacation_worklogs) ? worklogsData.vacation_worklogs : [];
+      document.getElementById('jiraWorklogsSummary').textContent =
+        `Worklogs de trabajo: ${workWorklogs.length} · Worklogs de vacaciones: ${vacationWorklogs.length}`;
+      document.getElementById('jiraWorklogsBox').textContent =
+        JSON.stringify({ trabajo: workWorklogs, vacaciones: vacationWorklogs }, null, 2);
 
       const analysisResponse = await fetch(
         `/api/integrations/jira/analysis?from=${encodeURIComponent(fromValue)}&to=${encodeURIComponent(toValue)}`
@@ -518,10 +536,12 @@
       }
       const details = analysisData.analysis || {};
       const expectedHours = ((details.expected_total_seconds || 0) / 3600).toFixed(2);
-      const clockedHours = ((details.clocked_total_seconds || 0) / 3600).toFixed(2);
-      const balanceHours = ((details.balance_seconds || 0) / 3600).toFixed(2);
+      const workHours = ((details.work_clocked_seconds || 0) / 3600).toFixed(2);
+      const balanceHours = ((details.work_balance_seconds || 0) / 3600).toFixed(2);
+      const vacDays = details.vacation_days_used || 0;
       document.getElementById('jiraAnalysisSummary').textContent =
-        `Esperado: ${expectedHours}h · Fichado: ${clockedHours}h · Balance: ${balanceHours}h`;
+        `Trabajo — Esperado: ${expectedHours}h · Fichado: ${workHours}h · Balance: ${balanceHours}h` +
+        (vacDays > 0 ? ` · Vacaciones: ${vacDays} días` : '');
       window.showToast('Worklogs y análisis de Tempo actualizados.');
     } catch (error) {
       window.showToast(error.message, true);
