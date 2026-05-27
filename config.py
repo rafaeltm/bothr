@@ -317,6 +317,7 @@ def write_managed_env(values: dict[str, str]) -> None:
         except FileNotFoundError:
             backup[path] = (False, '')
 
+    written_paths: list[Path] = []
     try:
         for path in (ENV_FILE, RUNTIME_ENV_FILE):
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -326,16 +327,23 @@ def write_managed_env(values: dict[str, str]) -> None:
             except OSError:
                 # chmod may not be supported on some local dev platforms.
                 pass
-    except Exception:
-        for path, (existed, previous_content) in backup.items():
-            if existed:
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(previous_content, encoding='utf-8')
-            else:
-                try:
-                    path.unlink()
-                except FileNotFoundError:
-                    pass
+            written_paths.append(path)
+    except Exception as write_error:
+        rollback_errors: list[str] = []
+        for path in written_paths:
+            existed, previous_content = backup[path]
+            try:
+                if existed:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(previous_content, encoding='utf-8')
+                else:
+                    path.unlink(missing_ok=True)
+            except Exception as rollback_error:
+                rollback_errors.append(f'{path}: {rollback_error}')
+        if rollback_errors:
+            raise RuntimeError(
+                f'Failed to write managed env and rollback cleanly: {"; ".join(rollback_errors)}'
+            ) from write_error
         raise
 
 
