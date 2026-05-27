@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import secrets
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
@@ -12,6 +13,7 @@ from urllib.request import Request, urlopen
 
 import config
 
+logger = logging.getLogger('bothr')
 _STATE_TTL = timedelta(minutes=10)
 _MAX_PUBLIC_ERROR_LENGTH = 300
 _oauth_states_lock = threading.Lock()
@@ -267,15 +269,40 @@ def _to_datetime_str(date_str: str, end_of_day: bool = False) -> str:
     ``started_after`` / ``started_before`` filter fields.  If the value already
     contains a time component it is returned unchanged.
     """
-    if 'T' in date_str or ' ' in date_str:
-        return date_str
-    time_part = 'T23:59:59+00:00' if end_of_day else 'T00:00:00+00:00'
-    return date_str + time_part
+    normalized = date_str.strip()
+    if 'T' in normalized or ' ' in normalized:
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return normalized
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=config.TZ)
+        return parsed.isoformat()
+    try:
+        local_date = datetime.fromisoformat(normalized).date()
+    except ValueError as exc:
+        raise TeamleaderError('El rango de fechas enviado a Teamleader es inválido.') from exc
+    local_time = time.max.replace(microsecond=0) if end_of_day else time.min
+    return datetime.combine(local_date, local_time, tzinfo=config.TZ).isoformat()
+
+
+def _extract_entry_user_id(entry: dict[str, Any]) -> str:
+    direct_user_id = entry.get('user_id')
+    if isinstance(direct_user_id, str):
+        return direct_user_id.strip()
+    for key in ('user', 'employee', 'worker', 'performed_by'):
+        user_ref = entry.get(key)
+        if isinstance(user_ref, dict):
+            user_id = user_ref.get('id')
+            if isinstance(user_id, str):
+                return user_id.strip()
+    return ''
 
 
 def list_time_entries(started_after: str, started_before: str) -> tuple[list[dict[str, Any]], dict[str, str]]:
     page_size = config.TEAMLEADER_PAGE_SIZE
     task_type = str(config.TEAMLEADER_TASK_TYPE).strip()
+    configured_user_id = (config.TEAMLEADER_USER_ID or '').strip()
     filters: dict[str, Any] = {
         'started_after': _to_datetime_str(started_after, end_of_day=False),
         'started_before': _to_datetime_str(started_before, end_of_day=True),
@@ -308,6 +335,10 @@ def list_time_entries(started_after: str, started_before: str) -> tuple[list[dic
         if not isinstance(data, list):
             break
         page_entries = [entry for entry in data if isinstance(entry, dict)]
+        if configured_user_id:
+            page_entries = [
+                entry for entry in page_entries if _extract_entry_user_id(entry) == configured_user_id
+            ]
         entries.extend(page_entries)
         if len(page_entries) < page_size:
             break

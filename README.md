@@ -119,6 +119,7 @@ This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both st
 | `TEAMLEADER_REFRESH_TOKEN` | No | Teamleader OAuth refresh token (managed automatically after connect). |
 | `TEAMLEADER_TOKEN_EXPIRES_AT` | No | ISO timestamp for Teamleader token expiration (managed automatically). |
 | `TEAMLEADER_ACCOUNT_ID` | No | Optional Teamleader account/organization identifier. |
+| `TEAMLEADER_USER_ID` | No | Teamleader user UUID used to keep only entries from a specific user in listings/analysis/summary. |
 | `TEAMLEADER_TASK_ID` | No | Teamleader task UUID used in `timeTracking.list` as `filter.subject` with type `nextgenTask`. |
 | `TEAMLEADER_TASK_TYPE` | No | Subject type used together with `TEAMLEADER_TASK_ID` in `timeTracking.list`. Default: `nextgenTask`. |
 | `TEAMLEADER_PAGE_SIZE` | No | Page size (1-100) used to paginate and aggregate all `timeTracking.list` results. Default: `100`. |
@@ -196,7 +197,7 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
 2. Configure `TEAMLEADER_CLIENT_ID`, `TEAMLEADER_CLIENT_SECRET` and `TEAMLEADER_REDIRECT_URI`.
 3. Set redirect URI to this dashboard callback:
    - `https://<your-host>/api/integrations/teamleader/callback`
-4. In Settings, define `TEAMLEADER_TASK_ID` (task UUID) and optionally `TEAMLEADER_TASK_TYPE` (default `nextgenTask`) so requests apply `subject: { type, id }`. You can also tune `TEAMLEADER_PAGE_SIZE` (1-100) for `timeTracking.list` pagination. Configure exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`); Teamleader analysis uses the same working calendar as the scheduler (weekends/holidays excluded).
+4. In Settings, define `TEAMLEADER_USER_ID` (your Teamleader user UUID) so only your fichajes are counted. Optionally define `TEAMLEADER_TASK_ID` (task UUID) and `TEAMLEADER_TASK_TYPE` (default `nextgenTask`) so requests also apply `subject: { type, id }`. You can tune `TEAMLEADER_PAGE_SIZE` (1-100) for `timeTracking.list` pagination. Configure exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`); Teamleader analysis uses the same working calendar as the scheduler (weekends/holidays excluded).
 5. Use **Conectar Teamleader** in Settings to complete OAuth and persist tokens.
 
 ## Development setup

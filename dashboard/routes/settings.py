@@ -124,7 +124,7 @@ def save_settings():
             continue
         if key == 'TEAMLEADER_TASK_TYPE':
             normalized_type = '' if value is None else str(value).strip()
-            current[key] = normalized_type
+            current[key] = normalized_type or str(config.TEAMLEADER_TASK_TYPE or 'nextgenTask')
             continue
         if isinstance(value, bool):
             current[key] = 'true' if value else 'false'
@@ -296,9 +296,23 @@ def _extract_duration_seconds(entry: dict[str, object]) -> int:
         return 0
     duration = entry.get('duration')
     if isinstance(duration, dict):
-        value = duration.get('seconds') or duration.get('value')
+        raw_unit = str(duration.get('unit') or '').strip().lower()
+        seconds_value = duration.get('seconds')
+        if isinstance(seconds_value, (int, float)):
+            return int(max(0, seconds_value))
+        value = duration.get('value')
         if isinstance(value, (int, float)):
-            return int(max(0, value))
+            normalized_value = max(0.0, float(value))
+            if raw_unit in {'hour', 'hours', 'h'}:
+                return int(normalized_value * 3600)
+            if raw_unit in {'minute', 'minutes', 'min', 'm'}:
+                return int(normalized_value * 60)
+            if raw_unit in {'second', 'seconds', 'sec', 's'}:
+                return int(normalized_value)
+            if raw_unit:
+                logger.warning('Unidad de duración Teamleader no reconocida: %s', raw_unit)
+                return 0
+            return int(normalized_value)
     if isinstance(duration, (int, float)):
         return int(max(0, duration))
     return 0

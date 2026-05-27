@@ -126,6 +126,11 @@
             <input class="form-control" name="TEAMLEADER_TASK_ID" value="{{ settings.TEAMLEADER_TASK_ID }}">
             <div class="form-text">ID de la tarea de Teamleader usada como filtro para los fichajes. Déjalo vacío para listar todas las entradas.</div>
           </div>
+          <div class="col-md-6">
+            <label class="form-label">TEAMLEADER_USER_ID</label>
+            <input class="form-control" name="TEAMLEADER_USER_ID" value="{{ settings.TEAMLEADER_USER_ID }}">
+            <div class="form-text">ID del usuario de Teamleader para filtrar fichajes y evitar mezclar horas de otros usuarios.</div>
+          </div>
           <div class="col-md-3">
             <label class="form-label">TEAMLEADER_TASK_TYPE</label>
             <input class="form-control" name="TEAMLEADER_TASK_TYPE" value="{{ settings.TEAMLEADER_TASK_TYPE }}" placeholder="nextgenTask">
