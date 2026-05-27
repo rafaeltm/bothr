@@ -103,6 +103,38 @@
             </div>
           </div>
         </div>
+        <div class="row g-3 mt-1">
+          <div class="col-12">
+            <h3 class="h6 mb-2">Añadir registro Teamleader</h3>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Fecha</label>
+            <input class="form-control" type="date" id="teamleaderAddDate">
+            <div class="form-text">Fecha del registro (por defecto: hoy).</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Horas</label>
+            <select class="form-select" id="teamleaderAddHours">
+              <option value="9">9h (jornada completa)</option>
+              <option value="7">7h (jornada reducida)</option>
+              <option value="custom">Personalizado…</option>
+            </select>
+          </div>
+          <div class="col-md-2" id="teamleaderAddHoursCustomWrapper" style="display:none;">
+            <label class="form-label">Horas exactas</label>
+            <input class="form-control" type="number" id="teamleaderAddHoursCustom" min="0.5" max="24" step="0.5" value="9">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Descripción (opcional)</label>
+            <input class="form-control" id="teamleaderAddDescription" placeholder="Trabajo del día">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-success" id="teamleaderAddEntryBtn" type="button">Añadir registro</button>
+          </div>
+          <div class="col-12">
+            <div class="small" id="teamleaderAddResult"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -112,6 +144,7 @@
 {% block scripts %}
 <script>
   let teamleaderPeriod = 'daily';
+  let teamleaderAvailable = false;
 
   function formatNextAction(data) {
     const action = data.next_action || '-';
@@ -136,12 +169,14 @@
   }
 
   function setTeamleaderUnavailable(message) {
+    teamleaderAvailable = false;
     document.getElementById('teamleaderStatusBadge').textContent = message || 'No disponible';
     document.getElementById('teamleaderTodayStatus').textContent = '-';
     document.getElementById('teamleaderTodayEntries').textContent = '-';
     document.getElementById('teamleaderTodayHours').textContent = '-';
     document.getElementById('teamleaderPeriodTotal').textContent = '-';
     document.getElementById('teamleaderPeriodRange').textContent = '-';
+    document.getElementById('teamleaderAddEntryBtn').disabled = true;
   }
 
   async function refreshTeamleaderSummary(showErrorToast = false) {
@@ -152,6 +187,8 @@
         throw new Error(data.error || 'No se pudo actualizar Teamleader.');
       }
       const summary = data.summary || {};
+      teamleaderAvailable = true;
+      document.getElementById('teamleaderAddEntryBtn').disabled = false;
       const hasTodayEntry = Boolean(summary.has_today_entry);
       document.getElementById('teamleaderStatusBadge').textContent = hasTodayEntry ? 'Con registro hoy' : 'Sin registro hoy';
       document.getElementById('teamleaderTodayStatus').textContent = hasTodayEntry ? 'Sí' : 'No';
@@ -233,6 +270,67 @@
       });
       await refreshTeamleaderSummary(true);
     });
+  });
+
+  document.getElementById('teamleaderAddHours').addEventListener('change', function () {
+    const customWrapper = document.getElementById('teamleaderAddHoursCustomWrapper');
+    customWrapper.style.display = this.value === 'custom' ? '' : 'none';
+  });
+
+  (function () {
+    const FRIDAY = 5;
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('teamleaderAddDate').value = `${yyyy}-${mm}-${dd}`;
+    if (today.getDay() === FRIDAY) {
+      document.getElementById('teamleaderAddHours').value = '7';
+    }
+  })();
+
+  document.getElementById('teamleaderAddEntryBtn').addEventListener('click', async () => {
+    const resultEl = document.getElementById('teamleaderAddResult');
+    resultEl.textContent = '';
+    try {
+      if (!teamleaderAvailable) {
+        throw new Error('La integración de Teamleader no está disponible.');
+      }
+      const dateValue = document.getElementById('teamleaderAddDate').value;
+      const hoursSelect = document.getElementById('teamleaderAddHours').value;
+      let hoursValue;
+      if (hoursSelect === 'custom') {
+        hoursValue = parseFloat(document.getElementById('teamleaderAddHoursCustom').value);
+        if (isNaN(hoursValue) || hoursValue <= 0) {
+          throw new Error('Introduce un número de horas válido.');
+        }
+      } else {
+        hoursValue = parseFloat(hoursSelect);
+      }
+      const description = document.getElementById('teamleaderAddDescription').value.trim();
+      const body = { hours: hoursValue };
+      if (dateValue) body.date = dateValue;
+      if (description) body.description = description;
+
+      const response = await fetch('/api/integrations/teamleader/add-entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo añadir el registro en Teamleader.');
+      }
+      const msg = `Registro añadido: ${data.date} · ${data.hours}h · ID: ${data.entry_id || '(sin ID)'}`;
+      resultEl.className = 'small text-success';
+      resultEl.textContent = msg;
+      window.showToast(msg);
+      await refreshTeamleaderSummary();
+    } catch (error) {
+      resultEl.className = 'small text-danger';
+      resultEl.textContent = error.message;
+      window.showToast(error.message, true);
+    }
   });
 
   loadPreferredClockIn().catch(() => window.showToast('No se pudo cargar la hora deseada. Por favor, recarga la página.', true));
