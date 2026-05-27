@@ -303,8 +303,11 @@
       }
       applySettings(analysisData.settings);
       const details = analysisData.analysis || {};
+      const expectedHours = ((details.expected_total_seconds || 0) / 3600).toFixed(2);
+      const clockedHours = ((details.clocked_total_seconds || 0) / 3600).toFixed(2);
+      const balanceHours = ((details.balance_seconds || 0) / 3600).toFixed(2);
       document.getElementById('teamleaderAnalysisSummary').textContent =
-        `Esperado: ${(details.expected_total_seconds || 0) / 3600}h · Fichado: ${(details.clocked_total_seconds || 0) / 3600}h · Balance: ${(details.balance_seconds || 0) / 3600}h`;
+        `Esperado: ${expectedHours}h · Fichado: ${clockedHours}h · Balance: ${balanceHours}h`;
       window.showToast('Fichajes y análisis de Teamleader actualizados.');
     } catch (error) {
       window.showToast(error.message, true);

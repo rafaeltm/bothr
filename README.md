@@ -186,8 +186,6 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
 | `GET` | `/api/status` | Returns the next scheduler action and today's fichaje status. |
 | `GET` | `/api/logs` | Returns the last 100 lines of `logs/general.log`. |
 
-## Development setup
-
 ## Teamleader setup notes
 
 1. Register an OAuth app in Teamleader.
@@ -196,6 +194,8 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
    - `https://<your-host>/api/integrations/teamleader/callback`
 4. In Settings, define `TEAMLEADER_TASK_ID` and exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`).
 5. Use **Conectar Teamleader** in Settings to complete OAuth and persist tokens.
+
+## Development setup
 
 1. Install Python 3.11+.
 2. Install dependencies:

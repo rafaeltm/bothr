@@ -64,6 +64,7 @@ def _http_post(url: str, body: dict[str, Any], headers: dict[str, str] | None = 
         request_headers.update(headers)
     request = Request(url=url, data=payload, method='POST', headers=request_headers)
     try:
+        # Safe: URLs are built from fixed defaults plus trusted operator config.
         with urlopen(request, timeout=20) as response:  # noqa: S310
             return _parse_json_response(response.read())
     except HTTPError as exc:

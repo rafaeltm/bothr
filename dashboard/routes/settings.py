@@ -101,7 +101,12 @@ def save_settings():
         if key in {'TEAMLEADER_WORKDAY_START', 'TEAMLEADER_WORKDAY_END'}:
             normalized = _normalize_time_value(value)
             if normalized is None:
-                return jsonify({'success': False, 'error': f'El campo {key} debe tener formato HH:MM.'}), 400
+                field_name = (
+                    'hora de inicio de jornada Teamleader'
+                    if key == 'TEAMLEADER_WORKDAY_START'
+                    else 'hora de fin de jornada Teamleader'
+                )
+                return jsonify({'success': False, 'error': f'La {field_name} debe tener formato HH:MM.'}), 400
             current[key] = normalized
             continue
         if isinstance(value, bool):
@@ -128,8 +133,8 @@ def teamleader_connect():
     try:
         auth_url = teamleader.build_authorization_url()
         return jsonify({'success': True, 'auth_url': auth_url})
-    except teamleader.TeamleaderError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+    except teamleader.TeamleaderError:
+        return jsonify({'success': False, 'error': 'No se pudo iniciar la conexión de Teamleader.'}), 400
     except Exception:
         logger.exception('No se pudo iniciar la conexión de Teamleader.')
         return jsonify({'success': False, 'error': 'No se pudo iniciar la conexión con Teamleader.'}), 500
@@ -155,8 +160,8 @@ def teamleader_callback():
         token_values = teamleader.exchange_code_for_token(code)
         _persist_settings_updates(token_values)
         return _redirect_teamleader_result(True, 'Cuenta Teamleader conectada correctamente.')
-    except teamleader.TeamleaderError as exc:
-        return _redirect_teamleader_result(False, str(exc))
+    except teamleader.TeamleaderError:
+        return _redirect_teamleader_result(False, 'No se pudo completar la autenticación con Teamleader.')
     except Exception:
         logger.exception('No se pudo completar el callback OAuth de Teamleader.')
         return _redirect_teamleader_result(False, 'No se pudo completar la conexión de Teamleader.')
@@ -191,8 +196,8 @@ def teamleader_test():
                 'account': response.get('data', {}),
             }
         )
-    except teamleader.TeamleaderError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+    except teamleader.TeamleaderError:
+        return jsonify({'success': False, 'error': 'No se pudo verificar la conexión con Teamleader.'}), 400
     except Exception:
         logger.exception('No se pudo verificar la conexión con Teamleader.')
         return jsonify({'success': False, 'error': 'No se pudo verificar la conexión con Teamleader.'}), 500
@@ -226,14 +231,19 @@ def teamleader_entries():
         if refresh_updates:
             _persist_settings_updates(refresh_updates)
         return jsonify({'success': True, 'entries': entries, 'settings': _get_form_settings()})
-    except teamleader.TeamleaderError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+    except teamleader.TeamleaderError:
+        return jsonify({'success': False, 'error': 'No se pudieron obtener los fichajes de Teamleader.'}), 400
     except Exception:
         logger.exception('No se pudieron obtener los fichajes de Teamleader.')
         return jsonify({'success': False, 'error': 'No se pudieron obtener los fichajes de Teamleader.'}), 500
 
 
 def _extract_duration_seconds(entry: dict[str, object]) -> int:
+    """Extract duration in seconds from Teamleader entries.
+
+    Teamleader can return duration as either a plain number or a nested object
+    with numeric `seconds`/`value` fields; unsupported shapes return 0.
+    """
     if not isinstance(entry, dict):
         return 0
     duration = entry.get('duration')
@@ -312,8 +322,8 @@ def teamleader_analysis():
                 'settings': _get_form_settings(),
             }
         )
-    except teamleader.TeamleaderError as exc:
-        return jsonify({'success': False, 'error': str(exc)}), 400
+    except teamleader.TeamleaderError:
+        return jsonify({'success': False, 'error': 'No se pudo calcular el análisis de horas de Teamleader.'}), 400
     except Exception:
         logger.exception('No se pudo calcular el análisis de horas de Teamleader.')
         return jsonify({'success': False, 'error': 'No se pudo calcular el análisis de horas de Teamleader.'}), 500
