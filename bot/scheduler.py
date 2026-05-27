@@ -151,8 +151,9 @@ async def _auto_teamleader_entry() -> None:
         subject_id = (config.TEAMLEADER_TASK_ID or '').strip() or None
         subject_type = (config.TEAMLEADER_TASK_TYPE or 'nextgenTask').strip()
         user_id = (config.TEAMLEADER_USER_ID or '').strip() or None
-        # Entries are sorted ascending by Teamleader list API, so reverse to check
-        # the most recent one first. If no subject is found, configured values are used.
+        # Entries are sorted ascending by starts_on in Teamleader list API, so
+        # reverse to check the most recent one first. If no subject is found,
+        # configured values are used.
         for entry in reversed(yesterday_entries):
             if user_id and teamleader.extract_entry_user_id(entry) != user_id:
                 continue
