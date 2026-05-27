@@ -7,6 +7,7 @@ from flask import Blueprint, jsonify, redirect, render_template, request, url_fo
 
 import config
 from bot import schedule, teamleader, telegram
+from bot import jira as jira_module
 from dashboard.auth import auth
 
 settings_bp = Blueprint('settings', __name__)
@@ -378,6 +379,123 @@ def test_telegram():
     except Exception:
         logger.exception('No se pudo enviar el mensaje de prueba de Telegram.')
         return jsonify({'success': False, 'error': 'No se pudo enviar el mensaje de prueba.'}), 500
+
+
+def _jira_disabled_response():
+    if config.JIRA_ENABLED:
+        return None
+    message = 'La integración de Jira/Tempo está desactivada. Actívala en Configuración.'
+    return jsonify({'success': False, 'error': message}), 400
+
+
+@settings_bp.post('/api/integrations/jira/test')
+@auth.login_required
+def jira_test():
+    disabled_response = _jira_disabled_response()
+    if disabled_response:
+        return disabled_response
+    try:
+        result = jira_module.test_connection()
+        return jsonify({'success': True, 'message': 'Conexión con Tempo verificada.', 'account': result})
+    except jira_module.JiraError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception:
+        logger.exception('No se pudo verificar la conexión con Tempo.')
+        return jsonify({'success': False, 'error': 'No se pudo verificar la conexión con Tempo.'}), 500
+
+
+@settings_bp.get('/api/integrations/jira/worklogs')
+@auth.login_required
+def jira_worklogs():
+    disabled_response = _jira_disabled_response()
+    if disabled_response:
+        return disabled_response
+    from_param = (request.args.get('from') or '').strip()
+    to_param = (request.args.get('to') or '').strip()
+    if not from_param or not to_param:
+        return jsonify({'success': False, 'error': 'Debes informar from y to en formato YYYY-MM-DD.'}), 400
+
+    try:
+        worklogs = jira_module.list_worklogs(from_param, to_param)
+        return jsonify({'success': True, 'worklogs': worklogs})
+    except jira_module.JiraError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception:
+        logger.exception('No se pudieron obtener los worklogs de Tempo.')
+        return jsonify({'success': False, 'error': 'No se pudieron obtener los worklogs de Tempo.'}), 500
+
+
+@settings_bp.get('/api/integrations/jira/analysis')
+@auth.login_required
+def jira_analysis():
+    disabled_response = _jira_disabled_response()
+    if disabled_response:
+        return disabled_response
+    from_param = (request.args.get('from') or '').strip()
+    to_param = (request.args.get('to') or '').strip()
+    if not from_param or not to_param:
+        return jsonify({'success': False, 'error': 'Debes informar from y to en formato YYYY-MM-DD.'}), 400
+
+    try:
+        from_date = datetime.fromisoformat(from_param)
+        to_date = datetime.fromisoformat(to_param)
+    except ValueError:
+        return jsonify({'success': False, 'error': 'from/to deben tener formato YYYY-MM-DD válido.'}), 400
+    if to_date < from_date:
+        return jsonify({'success': False, 'error': 'El rango de fechas es inválido.'}), 400
+
+    try:
+        exact_start = _parse_hhmm(config.JIRA_WORKDAY_START)
+        exact_end = _parse_hhmm(config.JIRA_WORKDAY_END)
+    except (TypeError, ValueError):
+        return jsonify(
+            {'success': False, 'error': 'Configura JIRA_WORKDAY_START y JIRA_WORKDAY_END en formato HH:MM.'}
+        ), 400
+
+    expected_daily_seconds = int(
+        (
+            datetime.combine(datetime.min, exact_end)
+            - datetime.combine(datetime.min, exact_start)
+        ).total_seconds()
+    )
+    if expected_daily_seconds <= 0:
+        return jsonify({'success': False, 'error': 'La jornada debe tener fin posterior al inicio.'}), 400
+
+    try:
+        worklogs = jira_module.list_worklogs(from_param, to_param)
+        total_clocked_seconds = sum(
+            int(w.get('timeSpentSeconds') or 0) for w in worklogs if isinstance(w, dict)
+        )
+        working_days = sum(
+            1
+            for day_offset in range((to_date.date() - from_date.date()).days + 1)
+            if schedule.is_working_day(
+                datetime.combine(
+                    from_date.date() + timedelta(days=day_offset),
+                    time.min,
+                    tzinfo=config.TZ,
+                )
+            )
+        )
+        expected_total_seconds = max(0, working_days * expected_daily_seconds)
+        return jsonify(
+            {
+                'success': True,
+                'analysis': {
+                    'working_days': working_days,
+                    'expected_daily_seconds': expected_daily_seconds,
+                    'expected_total_seconds': expected_total_seconds,
+                    'clocked_total_seconds': total_clocked_seconds,
+                    'balance_seconds': total_clocked_seconds - expected_total_seconds,
+                },
+                'worklogs_count': len(worklogs),
+            }
+        )
+    except jira_module.JiraError as exc:
+        return jsonify({'success': False, 'error': str(exc)}), 400
+    except Exception:
+        logger.exception('No se pudo calcular el análisis de horas de Tempo.')
+        return jsonify({'success': False, 'error': 'No se pudo calcular el análisis de horas de Tempo.'}), 500
 
 
 @settings_bp.get('/settings')

@@ -45,6 +45,11 @@ MANAGED_ENV_KEYS = [
     "TEAMLEADER_TASK_ID",
     "TEAMLEADER_WORKDAY_START",
     "TEAMLEADER_WORKDAY_END",
+    "JIRA_ENABLED",
+    "JIRA_TEMPO_BASE_URL",
+    "JIRA_TEMPO_API_TOKEN",
+    "JIRA_WORKDAY_START",
+    "JIRA_WORKDAY_END",
 ]
 SENSITIVE_ENV_KEYS = {
     "PASSWORD",
@@ -54,6 +59,7 @@ SENSITIVE_ENV_KEYS = {
     "TEAMLEADER_CLIENT_SECRET",
     "TEAMLEADER_ACCESS_TOKEN",
     "TEAMLEADER_REFRESH_TOKEN",
+    "JIRA_TEMPO_API_TOKEN",
 }
 
 USERNAME: str | None = None
@@ -83,6 +89,11 @@ TEAMLEADER_ACCOUNT_ID: str | None = None
 TEAMLEADER_TASK_ID: str | None = None
 TEAMLEADER_WORKDAY_START: str = "08:00"
 TEAMLEADER_WORKDAY_END: str = "17:00"
+JIRA_ENABLED: bool = False
+JIRA_TEMPO_BASE_URL: str = "https://api.tempo.io"
+JIRA_TEMPO_API_TOKEN: str | None = None
+JIRA_WORKDAY_START: str = "08:00"
+JIRA_WORKDAY_END: str = "17:00"
 _file_locks_mutex = threading.Lock()
 _file_locks: dict[Path, threading.RLock] = {}
 _calendar_cache_lock = threading.Lock()
@@ -181,6 +192,11 @@ def refresh(force_file_override: bool = False) -> None:
             "TEAMLEADER_TASK_ID": os.getenv("TEAMLEADER_TASK_ID") or None,
             "TEAMLEADER_WORKDAY_START": os.getenv("TEAMLEADER_WORKDAY_START") or "08:00",
             "TEAMLEADER_WORKDAY_END": os.getenv("TEAMLEADER_WORKDAY_END") or "17:00",
+            "JIRA_ENABLED": _get_bool("JIRA_ENABLED", default=False),
+            "JIRA_TEMPO_BASE_URL": os.getenv("JIRA_TEMPO_BASE_URL") or "https://api.tempo.io",
+            "JIRA_TEMPO_API_TOKEN": os.getenv("JIRA_TEMPO_API_TOKEN") or None,
+            "JIRA_WORKDAY_START": os.getenv("JIRA_WORKDAY_START") or "08:00",
+            "JIRA_WORKDAY_END": os.getenv("JIRA_WORKDAY_END") or "17:00",
         }
     )
     invalidate_calendar_cache()
@@ -257,6 +273,11 @@ def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dic
         'TEAMLEADER_TASK_ID': TEAMLEADER_TASK_ID or '',
         'TEAMLEADER_WORKDAY_START': TEAMLEADER_WORKDAY_START or '',
         'TEAMLEADER_WORKDAY_END': TEAMLEADER_WORKDAY_END or '',
+        'JIRA_ENABLED': JIRA_ENABLED,
+        'JIRA_TEMPO_BASE_URL': JIRA_TEMPO_BASE_URL or '',
+        'JIRA_TEMPO_API_TOKEN': JIRA_TEMPO_API_TOKEN or '',
+        'JIRA_WORKDAY_START': JIRA_WORKDAY_START or '',
+        'JIRA_WORKDAY_END': JIRA_WORKDAY_END or '',
     }
     if mask_sensitive:
         for key in SENSITIVE_ENV_KEYS:

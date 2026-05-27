@@ -193,6 +193,75 @@
           <div class="col-12">
             <div class="small text-muted" id="teamleaderAnalysisSummary">Análisis pendiente.</div>
           </div>
+
+          <div class="col-12 mt-4">
+            <hr>
+            <div class="d-flex align-items-center gap-3">
+              <div>
+                <h2 class="h5 mb-1">Integración Jira / Tempo Timesheets</h2>
+                <p class="text-muted mb-0">Consulta y analiza horas fichadas en Tempo Timesheets (Jira).</p>
+              </div>
+              <div class="form-check form-switch ms-auto">
+                <input class="form-check-input" type="checkbox" role="switch" id="jiraEnabledToggle" name="JIRA_ENABLED" {% if settings.JIRA_ENABLED %}checked{% endif %}>
+                <label class="form-check-label" for="jiraEnabledToggle">Activada</label>
+              </div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="alert alert-info py-2 px-3 mb-0 small">
+              <strong>Cómo obtener el API Token de Tempo:</strong>
+              <ol class="mb-0 mt-1 ps-3">
+                <li>Accede a tu instancia de Jira y ve a <strong>Tempo &gt; Configuración &gt; API Integration</strong>.</li>
+                <li>Genera un nuevo token de API y cópialo en el campo <em>JIRA_TEMPO_API_TOKEN</em> de abajo.</li>
+                <li>Guarda los cambios y pulsa <strong>Probar conexión</strong> para verificar.</li>
+              </ol>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">JIRA_TEMPO_BASE_URL</label>
+            <input class="form-control" name="JIRA_TEMPO_BASE_URL" value="{{ settings.JIRA_TEMPO_BASE_URL }}" placeholder="https://api.tempo.io">
+            <div class="form-text">URL base de la API de Tempo. Valor por defecto: <code>https://api.tempo.io</code>. Normalmente no es necesario cambiarlo.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">JIRA_TEMPO_API_TOKEN</label>
+            <input class="form-control" type="password" name="JIRA_TEMPO_API_TOKEN" value="{{ settings.JIRA_TEMPO_API_TOKEN }}">
+            <div class="form-text">Token de API de Tempo (Jira). Se genera en Tempo &gt; Configuración &gt; API Integration.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">JIRA_WORKDAY_START (HH:MM)</label>
+            <input class="form-control" type="time" name="JIRA_WORKDAY_START" value="{{ settings.JIRA_WORKDAY_START }}">
+            <div class="form-text">Hora exacta de inicio de jornada para el análisis de horas en Jira/Tempo.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">JIRA_WORKDAY_END (HH:MM)</label>
+            <input class="form-control" type="time" name="JIRA_WORKDAY_END" value="{{ settings.JIRA_WORKDAY_END }}">
+            <div class="form-text">Hora exacta de fin de jornada para el análisis de horas en Jira/Tempo.</div>
+          </div>
+          <div class="col-12 d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-secondary" id="jiraTestBtn" type="button">Probar conexión</button>
+          </div>
+
+          <div class="col-12 mt-2">
+            <h3 class="h6 mb-2">Consulta de worklogs Jira / Tempo</h3>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Desde</label>
+            <input class="form-control" type="date" id="jiraFrom">
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Hasta</label>
+            <input class="form-control" type="date" id="jiraTo">
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-outline-dark w-100" id="jiraFetchBtn" type="button">Consultar</button>
+          </div>
+          <div class="col-12">
+            <div class="small text-muted" id="jiraWorklogsSummary">Sin datos consultados.</div>
+            <pre class="bg-light border rounded p-3 mt-2 mb-0 small" id="jiraWorklogsBox" style="max-height: 260px; overflow: auto;">[]</pre>
+          </div>
+          <div class="col-12">
+            <div class="small text-muted" id="jiraAnalysisSummary">Análisis pendiente.</div>
+          </div>
         </form>
       </div>
     </div>
@@ -233,6 +302,7 @@
     }
     payload.ENABLE = document.getElementById('enableToggle').checked;
     payload.TEAMLEADER_ENABLED = document.getElementById('teamleaderEnabledToggle').checked;
+    payload.JIRA_ENABLED = document.getElementById('jiraEnabledToggle').checked;
     return payload;
   }
 
@@ -251,6 +321,7 @@
     });
     document.getElementById('enableToggle').checked = Boolean(values.ENABLE);
     syncTeamleaderControls();
+    if (typeof syncJiraControls === 'function') syncJiraControls();
   }
 
   function getIsoRange() {
@@ -383,5 +454,81 @@
 
   document.getElementById('teamleaderEnabledToggle').addEventListener('change', syncTeamleaderControls);
   syncTeamleaderControls();
+
+  // ── Jira / Tempo ────────────────────────────────────────────────────────────
+  const jiraControlIds = ['jiraTestBtn', 'jiraFetchBtn', 'jiraFrom', 'jiraTo'];
+
+  function isJiraEnabled() {
+    return Boolean(document.getElementById('jiraEnabledToggle')?.checked);
+  }
+
+  function syncJiraControls() {
+    const enabled = isJiraEnabled();
+    for (const id of jiraControlIds) {
+      const element = document.getElementById(id);
+      if (!element) continue;
+      element.disabled = !enabled;
+    }
+  }
+
+  document.getElementById('jiraTestBtn').addEventListener('click', async () => {
+    try {
+      if (!isJiraEnabled()) {
+        throw new Error('La integración de Jira/Tempo está desactivada.');
+      }
+      const response = await fetch('/api/integrations/jira/test', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo probar la conexión de Tempo.');
+      }
+      window.showToast(data.message || 'Conexión Tempo verificada.');
+    } catch (error) {
+      window.showToast(error.message, true);
+    }
+  });
+
+  document.getElementById('jiraFetchBtn').addEventListener('click', async () => {
+    try {
+      if (!isJiraEnabled()) {
+        throw new Error('La integración de Jira/Tempo está desactivada.');
+      }
+      const fromValue = document.getElementById('jiraFrom').value;
+      const toValue = document.getElementById('jiraTo').value;
+      if (!fromValue || !toValue) {
+        throw new Error('Selecciona un rango de fechas para consultar Tempo.');
+      }
+
+      const worklogsResponse = await fetch(
+        `/api/integrations/jira/worklogs?from=${encodeURIComponent(fromValue)}&to=${encodeURIComponent(toValue)}`
+      );
+      const worklogsData = await worklogsResponse.json();
+      if (!worklogsResponse.ok || !worklogsData.success) {
+        throw new Error(worklogsData.error || 'No se pudieron obtener los worklogs de Tempo.');
+      }
+      const worklogs = Array.isArray(worklogsData.worklogs) ? worklogsData.worklogs : [];
+      document.getElementById('jiraWorklogsSummary').textContent = `Worklogs obtenidos: ${worklogs.length}`;
+      document.getElementById('jiraWorklogsBox').textContent = JSON.stringify(worklogs, null, 2);
+
+      const analysisResponse = await fetch(
+        `/api/integrations/jira/analysis?from=${encodeURIComponent(fromValue)}&to=${encodeURIComponent(toValue)}`
+      );
+      const analysisData = await analysisResponse.json();
+      if (!analysisResponse.ok || !analysisData.success) {
+        throw new Error(analysisData.error || 'No se pudo calcular el análisis de Tempo.');
+      }
+      const details = analysisData.analysis || {};
+      const expectedHours = ((details.expected_total_seconds || 0) / 3600).toFixed(2);
+      const clockedHours = ((details.clocked_total_seconds || 0) / 3600).toFixed(2);
+      const balanceHours = ((details.balance_seconds || 0) / 3600).toFixed(2);
+      document.getElementById('jiraAnalysisSummary').textContent =
+        `Esperado: ${expectedHours}h · Fichado: ${clockedHours}h · Balance: ${balanceHours}h`;
+      window.showToast('Worklogs y análisis de Tempo actualizados.');
+    } catch (error) {
+      window.showToast(error.message, true);
+    }
+  });
+
+  document.getElementById('jiraEnabledToggle').addEventListener('change', syncJiraControls);
+  syncJiraControls();
 </script>
 {% endblock %}
