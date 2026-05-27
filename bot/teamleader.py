@@ -267,9 +267,13 @@ def _to_datetime_str(date_str: str, end_of_day: bool = False) -> str:
     ``started_after`` / ``started_before`` filter fields.  If the value already
     contains a time component it is returned unchanged.
     """
-    if 'T' in date_str or ' ' in date_str:
-        return date_str
-    local_date = datetime.fromisoformat(date_str.strip()).date()
+    normalized = date_str.strip()
+    if 'T' in normalized or ' ' in normalized:
+        return normalized
+    try:
+        local_date = datetime.fromisoformat(normalized).date()
+    except ValueError as exc:
+        raise TeamleaderError('El rango de fechas enviado a Teamleader es inválido.') from exc
     local_time = time.max.replace(microsecond=0) if end_of_day else time.min
     return datetime.combine(local_date, local_time, tzinfo=config.TZ).isoformat()
 
