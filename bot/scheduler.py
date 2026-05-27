@@ -150,9 +150,12 @@ async def _auto_teamleader_entry() -> None:
         started_at = datetime.combine(now.date(), workday_start, tzinfo=config.TZ)
         subject_id = (config.TEAMLEADER_TASK_ID or '').strip() or None
         subject_type = (config.TEAMLEADER_TASK_TYPE or 'nextgenTask').strip()
+        user_id = (config.TEAMLEADER_USER_ID or '').strip() or None
         # Entries are sorted ascending by Teamleader list API, so reverse to check
         # the most recent one first. If no subject is found, configured values are used.
         for entry in reversed(yesterday_entries):
+            if user_id and teamleader.extract_entry_user_id(entry) != user_id:
+                continue
             previous_subject_id, previous_subject_type = teamleader.extract_entry_subject(entry)
             if not previous_subject_id:
                 continue
@@ -163,7 +166,6 @@ async def _auto_teamleader_entry() -> None:
                 f'Registro automático Teamleader: usando tarea del día anterior ({subject_type}:{subject_id}).'
             )
             break
-        user_id = (config.TEAMLEADER_USER_ID or '').strip() or None
         _, refresh_updates = teamleader.add_time_entry(
             started_at=started_at,
             duration_seconds=duration_seconds,

@@ -120,7 +120,7 @@ This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both st
 | `TEAMLEADER_REFRESH_TOKEN` | No | Teamleader OAuth refresh token (managed automatically after connect). |
 | `TEAMLEADER_TOKEN_EXPIRES_AT` | No | ISO timestamp for Teamleader token expiration (managed automatically). |
 | `TEAMLEADER_ACCOUNT_ID` | No | Optional Teamleader account/organization identifier. |
-| `TEAMLEADER_USER_ID` | No | Teamleader user UUID used to keep only entries from a specific user in listings/analysis/summary. |
+| `TEAMLEADER_USER_ID` | No | Teamleader user UUID used to keep only entries from a specific user in listings/analysis/summary and when reusing yesterday's task for auto-entry. |
 | `TEAMLEADER_TASK_ID` | No | Teamleader task UUID used in `timeTracking.list` as `filter.subject` with type `nextgenTask`. |
 | `TEAMLEADER_TASK_TYPE` | No | Subject type used together with `TEAMLEADER_TASK_ID` in `timeTracking.list`. Default: `nextgenTask`. |
 | `TEAMLEADER_PAGE_SIZE` | No | Page size (1-100) used to paginate and aggregate all `timeTracking.list` results. Default: `100`. |

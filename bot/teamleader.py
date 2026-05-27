@@ -286,7 +286,7 @@ def _to_datetime_str(date_str: str, end_of_day: bool = False) -> str:
     return datetime.combine(local_date, local_time, tzinfo=config.TZ).isoformat()
 
 
-def _extract_entry_user_id(entry: dict[str, Any]) -> str:
+def extract_entry_user_id(entry: dict[str, Any]) -> str:
     direct_user_id = entry.get('user_id')
     if isinstance(direct_user_id, str):
         return direct_user_id.strip()
@@ -400,7 +400,7 @@ def list_time_entries(
         page_entries = [entry for entry in data if isinstance(entry, dict)]
         if configured_user_id:
             page_entries = [
-                entry for entry in page_entries if _extract_entry_user_id(entry) == configured_user_id
+                entry for entry in page_entries if extract_entry_user_id(entry) == configured_user_id
             ]
         entries.extend(page_entries)
         if len(page_entries) < page_size:
