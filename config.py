@@ -32,6 +32,7 @@ MANAGED_ENV_KEYS = [
     "PREFERRED_CLOCK_IN",
     "DASHBOARD_PASSWORD",
     "DASHBOARD_PORT",
+    "TEAMLEADER_ENABLED",
     "TEAMLEADER_CLIENT_ID",
     "TEAMLEADER_CLIENT_SECRET",
     "TEAMLEADER_REDIRECT_URI",
@@ -69,6 +70,7 @@ JORNADA_REDUCIDA_FILE: Path = DATA_DIR / "jornada_reducida.json"
 PREFERRED_CLOCK_IN: time = time(hour=8, minute=0)
 DASHBOARD_PASSWORD: str = "admin"
 DASHBOARD_PORT: int = 5000
+TEAMLEADER_ENABLED: bool = False
 TEAMLEADER_CLIENT_ID: str | None = None
 TEAMLEADER_CLIENT_SECRET: str | None = None
 TEAMLEADER_REDIRECT_URI: str | None = None
@@ -164,6 +166,7 @@ def refresh(force_file_override: bool = False) -> None:
             "PREFERRED_CLOCK_IN": _get_time("PREFERRED_CLOCK_IN", time(hour=8, minute=0)),
             "DASHBOARD_PASSWORD": os.getenv("DASHBOARD_PASSWORD") or "admin",
             "DASHBOARD_PORT": _get_int("DASHBOARD_PORT", 5000),
+            "TEAMLEADER_ENABLED": _get_bool("TEAMLEADER_ENABLED", default=False),
             "TEAMLEADER_CLIENT_ID": os.getenv("TEAMLEADER_CLIENT_ID") or None,
             "TEAMLEADER_CLIENT_SECRET": os.getenv("TEAMLEADER_CLIENT_SECRET") or None,
             "TEAMLEADER_REDIRECT_URI": os.getenv("TEAMLEADER_REDIRECT_URI") or None,
@@ -241,6 +244,7 @@ def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dic
         'PREFERRED_CLOCK_IN': PREFERRED_CLOCK_IN.strftime('%H:%M'),
         'DASHBOARD_PASSWORD': DASHBOARD_PASSWORD or '',
         'DASHBOARD_PORT': DASHBOARD_PORT,
+        'TEAMLEADER_ENABLED': TEAMLEADER_ENABLED,
         'TEAMLEADER_CLIENT_ID': TEAMLEADER_CLIENT_ID or '',
         'TEAMLEADER_CLIENT_SECRET': TEAMLEADER_CLIENT_SECRET or '',
         'TEAMLEADER_REDIRECT_URI': TEAMLEADER_REDIRECT_URI or '',

@@ -83,8 +83,16 @@
 
           <div class="col-12 mt-4">
             <hr>
-            <h2 class="h5 mb-1">Integración Teamleader</h2>
-            <p class="text-muted mb-0">Conecta Teamleader, define la tarea a fichar y configura jornada exacta.</p>
+            <div class="d-flex align-items-center gap-3">
+              <div>
+                <h2 class="h5 mb-1">Integración Teamleader</h2>
+                <p class="text-muted mb-0">Conecta Teamleader, define la tarea a fichar y configura jornada exacta.</p>
+              </div>
+              <div class="form-check form-switch ms-auto">
+                <input class="form-check-input" type="checkbox" role="switch" id="teamleaderEnabledToggle" name="TEAMLEADER_ENABLED" {% if settings.TEAMLEADER_ENABLED %}checked{% endif %}>
+                <label class="form-check-label" for="teamleaderEnabledToggle">Activada</label>
+              </div>
+            </div>
           </div>
           <div class="col-12">
             <div class="alert alert-info py-2 px-3 mb-0 small">
@@ -203,6 +211,7 @@
       payload[key] = value;
     }
     payload.ENABLE = document.getElementById('enableToggle').checked;
+    payload.TEAMLEADER_ENABLED = document.getElementById('teamleaderEnabledToggle').checked;
     return payload;
   }
 
