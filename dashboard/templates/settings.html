@@ -203,6 +203,27 @@
 {% block scripts %}
 <script>
   const formMask = {{ form_mask|tojson }};
+  const teamleaderControlIds = [
+    'teamleaderConnectBtn',
+    'teamleaderTestBtn',
+    'teamleaderDisconnectBtn',
+    'teamleaderFetchBtn',
+    'teamleaderFrom',
+    'teamleaderTo'
+  ];
+
+  function isTeamleaderEnabled() {
+    return Boolean(document.getElementById('teamleaderEnabledToggle')?.checked);
+  }
+
+  function syncTeamleaderControls() {
+    const enabled = isTeamleaderEnabled();
+    for (const id of teamleaderControlIds) {
+      const element = document.getElementById(id);
+      if (!element) continue;
+      element.disabled = !enabled;
+    }
+  }
 
   function serializeForm(form) {
     const formData = new FormData(form);
@@ -229,6 +250,7 @@
       }
     });
     document.getElementById('enableToggle').checked = Boolean(values.ENABLE);
+    syncTeamleaderControls();
   }
 
   function getIsoRange() {
@@ -277,6 +299,9 @@
 
   document.getElementById('teamleaderConnectBtn').addEventListener('click', async () => {
     try {
+      if (!isTeamleaderEnabled()) {
+        throw new Error('La integración de Teamleader está desactivada.');
+      }
       const response = await fetch('/api/integrations/teamleader/connect', { method: 'POST' });
       const data = await response.json();
       if (!response.ok || !data.success || !data.auth_url) {
@@ -290,6 +315,9 @@
 
   document.getElementById('teamleaderTestBtn').addEventListener('click', async () => {
     try {
+      if (!isTeamleaderEnabled()) {
+        throw new Error('La integración de Teamleader está desactivada.');
+      }
       const response = await fetch('/api/integrations/teamleader/test', { method: 'POST' });
       const data = await response.json();
       if (!response.ok || !data.success) {
@@ -304,6 +332,9 @@
 
   document.getElementById('teamleaderDisconnectBtn').addEventListener('click', async () => {
     try {
+      if (!isTeamleaderEnabled()) {
+        throw new Error('La integración de Teamleader está desactivada.');
+      }
       const response = await fetch('/api/integrations/teamleader/disconnect', { method: 'POST' });
       const data = await response.json();
       if (!response.ok || !data.success) {
@@ -318,6 +349,9 @@
 
   document.getElementById('teamleaderFetchBtn').addEventListener('click', async () => {
     try {
+      if (!isTeamleaderEnabled()) {
+        throw new Error('La integración de Teamleader está desactivada.');
+      }
       const range = getIsoRange();
       const entriesResponse = await fetch(`/api/integrations/teamleader/entries?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`);
       const entriesData = await entriesResponse.json();
@@ -346,5 +380,8 @@
       window.showToast(error.message, true);
     }
   });
+
+  document.getElementById('teamleaderEnabledToggle').addEventListener('change', syncTeamleaderControls);
+  syncTeamleaderControls();
 </script>
 {% endblock %}

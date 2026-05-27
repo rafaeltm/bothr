@@ -127,9 +127,21 @@ def _redirect_teamleader_result(success: bool, message: str):
     return redirect(url_for('settings.settings_page', teamleader_status=status, teamleader_message=message))
 
 
+def _teamleader_disabled_response(redirect_on_error: bool = False):
+    if config.TEAMLEADER_ENABLED:
+        return None
+    message = 'La integración de Teamleader está desactivada. Actívala en Configuración.'
+    if redirect_on_error:
+        return _redirect_teamleader_result(False, message)
+    return jsonify({'success': False, 'error': message}), 400
+
+
 @settings_bp.post('/api/integrations/teamleader/connect')
 @auth.login_required
 def teamleader_connect():
+    disabled_response = _teamleader_disabled_response()
+    if disabled_response:
+        return disabled_response
     try:
         auth_url = teamleader.build_authorization_url()
         return jsonify({'success': True, 'auth_url': auth_url})
@@ -143,6 +155,9 @@ def teamleader_connect():
 @settings_bp.get('/api/integrations/teamleader/callback')
 @auth.login_required
 def teamleader_callback():
+    disabled_response = _teamleader_disabled_response(redirect_on_error=True)
+    if disabled_response:
+        return disabled_response
     error = (request.args.get('error') or '').strip()
     if error:
         description = (request.args.get('error_description') or '').strip()
@@ -170,6 +185,9 @@ def teamleader_callback():
 @settings_bp.post('/api/integrations/teamleader/disconnect')
 @auth.login_required
 def teamleader_disconnect():
+    disabled_response = _teamleader_disabled_response()
+    if disabled_response:
+        return disabled_response
     _persist_settings_updates(
         {
             'TEAMLEADER_ACCESS_TOKEN': '',
@@ -184,6 +202,9 @@ def teamleader_disconnect():
 @settings_bp.post('/api/integrations/teamleader/test')
 @auth.login_required
 def teamleader_test():
+    disabled_response = _teamleader_disabled_response()
+    if disabled_response:
+        return disabled_response
     try:
         response, refresh_updates = teamleader.test_connection()
         if refresh_updates:
@@ -213,6 +234,9 @@ def _normalize_iso_datetime(raw_value: str) -> datetime:
 @settings_bp.get('/api/integrations/teamleader/entries')
 @auth.login_required
 def teamleader_entries():
+    disabled_response = _teamleader_disabled_response()
+    if disabled_response:
+        return disabled_response
     from_param = (request.args.get('from') or '').strip()
     to_param = (request.args.get('to') or '').strip()
     if not from_param or not to_param:
@@ -242,7 +266,8 @@ def _extract_duration_seconds(entry: dict[str, object]) -> int:
     """Extract duration in seconds from Teamleader entries.
 
     Teamleader can return duration as either a plain number or a nested object
-    with numeric `seconds`/`value` fields; unsupported shapes return 0.
+    with numeric `seconds`/`value` fields; missing, non-numeric, unsupported, or
+    negative values return 0.
     """
     if not isinstance(entry, dict):
         return 0
@@ -264,6 +289,9 @@ def _parse_hhmm(raw_value: str) -> time:
 @settings_bp.get('/api/integrations/teamleader/analysis')
 @auth.login_required
 def teamleader_analysis():
+    disabled_response = _teamleader_disabled_response()
+    if disabled_response:
+        return disabled_response
     from_param = (request.args.get('from') or '').strip()
     to_param = (request.args.get('to') or '').strip()
     if not from_param or not to_param:
