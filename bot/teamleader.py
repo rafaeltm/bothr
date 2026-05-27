@@ -299,6 +299,25 @@ def _extract_entry_user_id(entry: dict[str, Any]) -> str:
     return ''
 
 
+def _extract_entry_subject(entry: dict[str, Any]) -> tuple[str | None, str | None]:
+    subject_ref = entry.get('subject')
+    if not isinstance(subject_ref, dict):
+        return None, None
+
+    subject_id = subject_ref.get('id')
+    subject_type = subject_ref.get('type')
+    normalized_subject_id = subject_id.strip() if isinstance(subject_id, str) else ''
+    normalized_subject_type = subject_type.strip() if isinstance(subject_type, str) else ''
+
+    if not normalized_subject_id:
+        return None, None
+    return normalized_subject_id, (normalized_subject_type or None)
+
+
+def get_entry_subject(entry: dict[str, Any]) -> tuple[str | None, str | None]:
+    return _extract_entry_subject(entry)
+
+
 def add_time_entry(
     started_at: datetime,
     duration_seconds: int,
@@ -343,7 +362,11 @@ def add_time_entry(
     return api_call('timeTracking.add', payload)
 
 
-def list_time_entries(started_after: str, started_before: str) -> tuple[list[dict[str, Any]], dict[str, str]]:
+def list_time_entries(
+    started_after: str,
+    started_before: str,
+    apply_task_filter: bool = True,
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
     page_size = config.TEAMLEADER_PAGE_SIZE
     task_type = str(config.TEAMLEADER_TASK_TYPE).strip()
     configured_user_id = (config.TEAMLEADER_USER_ID or '').strip()
@@ -351,7 +374,7 @@ def list_time_entries(started_after: str, started_before: str) -> tuple[list[dic
         'started_after': _to_datetime_str(started_after, end_of_day=False),
         'started_before': _to_datetime_str(started_before, end_of_day=True),
     }
-    if config.TEAMLEADER_TASK_ID:
+    if apply_task_filter and config.TEAMLEADER_TASK_ID:
         filters['subject'] = {
             'type': task_type,
             'id': config.TEAMLEADER_TASK_ID,
