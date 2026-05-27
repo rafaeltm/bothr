@@ -21,16 +21,6 @@ def _stringify_value(value: object) -> str:
     return '' if value is None else str(value)
 
 
-def _format_env_value(value: str) -> str:
-    if value == '':
-        return ''
-    needs_quotes = any(char.isspace() for char in value) or '#' in value or '"' in value
-    escaped = value.replace('\\', '\\\\').replace('"', '\\"')
-    if needs_quotes:
-        return f'"{escaped}"'
-    return escaped
-
-
 def _normalize_time_value(value: object) -> str | None:
     if value is None:
         return ''
@@ -45,9 +35,7 @@ def _normalize_time_value(value: object) -> str | None:
 
 
 def _write_env_file(values: dict[str, str]) -> None:
-    lines = [f'{key}={_format_env_value(values.get(key, ""))}' for key in config.MANAGED_ENV_KEYS]
-    config.ENV_FILE.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    config.ENV_FILE.chmod(0o600)
+    config.write_managed_env(values)
 
 
 def _get_current_env_values() -> dict[str, str]:
