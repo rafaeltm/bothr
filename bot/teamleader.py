@@ -299,6 +299,50 @@ def _extract_entry_user_id(entry: dict[str, Any]) -> str:
     return ''
 
 
+def add_time_entry(
+    started_at: datetime,
+    duration_seconds: int,
+    subject_id: str | None = None,
+    subject_type: str | None = None,
+    description: str | None = None,
+    user_id: str | None = None,
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Create a new time-tracking entry in Teamleader via ``timeTracking.add``.
+
+    Args:
+        started_at: Timezone-aware datetime when the entry starts.
+        duration_seconds: Duration of the entry in seconds (must be > 0).
+        subject_id: Optional Teamleader task/project ID to link the entry to.
+        subject_type: Subject type string (e.g. ``"nextgenTask"``); required
+            when *subject_id* is provided.
+        description: Optional free-text description for the entry.
+        user_id: Optional Teamleader user ID to assign the entry to.
+
+    Returns:
+        A tuple of ``(response_data, refresh_updates)`` where *response_data*
+        is the parsed JSON response and *refresh_updates* contains any new
+        token values that should be persisted.
+    """
+    if duration_seconds <= 0:
+        raise TeamleaderError('La duración del registro debe ser mayor que cero.')
+    if started_at.tzinfo is None:
+        started_at = started_at.replace(tzinfo=config.TZ)
+    payload: dict[str, Any] = {
+        'started_at': started_at.isoformat(),
+        'duration': duration_seconds,
+    }
+    if subject_id:
+        payload['subject'] = {
+            'type': subject_type or 'nextgenTask',
+            'id': subject_id,
+        }
+    if description:
+        payload['description'] = description
+    if user_id:
+        payload['user_id'] = user_id
+    return api_call('timeTracking.add', payload)
+
+
 def list_time_entries(started_after: str, started_before: str) -> tuple[list[dict[str, Any]], dict[str, str]]:
     page_size = config.TEAMLEADER_PAGE_SIZE
     task_type = str(config.TEAMLEADER_TASK_TYPE).strip()
