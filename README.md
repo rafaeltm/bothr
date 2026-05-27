@@ -7,6 +7,7 @@ Bothr automates daily clock-in and clock-out actions with Playwright and exposes
 ## Quick start with docker-compose
 
 1. Create a `.env` file with the required variables.
+   - Runtime changes made from the dashboard are persisted to `data/runtime.env` (mounted volume) and survive container redeploys.
 2. Generate TLS certificates for your server's IP address (run once):
 
 ```bash
@@ -119,12 +120,14 @@ This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both st
 | `TEAMLEADER_REFRESH_TOKEN` | No | Teamleader OAuth refresh token (managed automatically after connect). |
 | `TEAMLEADER_TOKEN_EXPIRES_AT` | No | ISO timestamp for Teamleader token expiration (managed automatically). |
 | `TEAMLEADER_ACCOUNT_ID` | No | Optional Teamleader account/organization identifier. |
-| `TEAMLEADER_USER_ID` | No | Teamleader user UUID used to keep only entries from a specific user in listings/analysis/summary. |
+| `TEAMLEADER_USER_ID` | No | Teamleader user UUID used to keep only entries from a specific user in listings/analysis/summary and when reusing yesterday's task for auto-entry. |
 | `TEAMLEADER_TASK_ID` | No | Teamleader task UUID used in `timeTracking.list` as `filter.subject` with type `nextgenTask`. |
 | `TEAMLEADER_TASK_TYPE` | No | Subject type used together with `TEAMLEADER_TASK_ID` in `timeTracking.list`. Default: `nextgenTask`. |
 | `TEAMLEADER_PAGE_SIZE` | No | Page size (1-100) used to paginate and aggregate all `timeTracking.list` results. Default: `100`. |
 | `TEAMLEADER_WORKDAY_START` | No | Exact start time (`HH:MM`) used for Teamleader hour analysis. Default: `08:00`. |
 | `TEAMLEADER_WORKDAY_END` | No | Exact end time (`HH:MM`) used for Teamleader hour analysis. Default: `17:00`. |
+
+> **Persistence note:** dashboard/API setting updates (including Teamleader tokens) are stored in both `.env` and `data/runtime.env`. On startup, `data/runtime.env` is loaded with priority so values survive container recreation when `data/` is persisted.
 
 ## Dashboard features
 

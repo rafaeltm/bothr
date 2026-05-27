@@ -14,6 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 LOGS_DIR = BASE_DIR / "logs"
 ENV_FILE = BASE_DIR / ".env"
+RUNTIME_ENV_FILE = DATA_DIR / "runtime.env"
 TZ = ZoneInfo("Europe/Madrid")
 MASK_VALUE = "***...***"
 
@@ -151,7 +152,9 @@ def refresh(force_file_override: bool = False) -> None:
 
     By default, keep compatibility with previous behavior where process env values
     are not overridden by .env values. When `force_file_override=True`, values from
-    ENV_FILE override the process env (used by dashboard runtime updates). The
+    ENV_FILE override the process env (used by dashboard runtime updates). A
+    runtime file in data/ (`RUNTIME_ENV_FILE`) is always loaded last with override
+    enabled to preserve dashboard-managed values across container redeploys. The
     first call intentionally uses dotenv discovery behavior (including parent dirs)
     to remain compatible with previous deployments.
     """
@@ -159,6 +162,8 @@ def refresh(force_file_override: bool = False) -> None:
     load_dotenv(override=False)
     # 2) Optionally override from our managed ENV_FILE so dashboard changes apply at runtime.
     load_dotenv(ENV_FILE, override=force_file_override)
+    # 3) Always load persistent runtime-managed values from /data to survive container redeploys.
+    load_dotenv(RUNTIME_ENV_FILE, override=True)
 
     globals().update(
         {
@@ -302,6 +307,46 @@ def _format_env_value(value: str) -> str:
     return escaped
 
 
+def write_managed_env(values: dict[str, str]) -> None:
+    lines = [f'{key}={_format_env_value(values.get(key, ""))}' for key in MANAGED_ENV_KEYS]
+    payload = '\n'.join(lines) + '\n'
+    backup: dict[Path, tuple[bool, str]] = {}
+    for path in (ENV_FILE, RUNTIME_ENV_FILE):
+        try:
+            backup[path] = (True, path.read_text(encoding='utf-8'))
+        except FileNotFoundError:
+            backup[path] = (False, '')
+
+    written_paths: list[Path] = []
+    try:
+        for path in (ENV_FILE, RUNTIME_ENV_FILE):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(payload, encoding='utf-8')
+            try:
+                path.chmod(0o600)
+            except OSError:
+                # chmod may not be supported on some local dev platforms.
+                pass
+            written_paths.append(path)
+    except Exception as write_error:
+        rollback_errors: list[str] = []
+        for path in written_paths:
+            existed, previous_content = backup[path]
+            try:
+                if existed:
+                    path.parent.mkdir(parents=True, exist_ok=True)
+                    path.write_text(previous_content, encoding='utf-8')
+                else:
+                    path.unlink(missing_ok=True)
+            except Exception as rollback_error:
+                rollback_errors.append(f'{path}: {rollback_error}')
+        if rollback_errors:
+            raise RuntimeError(
+                f'Failed to write managed env and rollback cleanly: {"; ".join(rollback_errors)}'
+            ) from write_error
+        raise
+
+
 def persist_token_updates(updates: dict[str, object]) -> None:
     """Persist Teamleader token refresh values to the .env file and reload config.
 
@@ -317,9 +362,7 @@ def persist_token_updates(updates: dict[str, object]) -> None:
         if key not in current:
             continue
         current[key] = _stringify_value(value).strip()
-    lines = [f'{key}={_format_env_value(current.get(key, ""))}' for key in MANAGED_ENV_KEYS]
-    ENV_FILE.write_text('\n'.join(lines) + '\n', encoding='utf-8')
-    ENV_FILE.chmod(0o600)
+    write_managed_env(current)
     refresh(force_file_override=True)
 
 

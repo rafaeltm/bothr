@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 import config
 from bot import fichaje
@@ -108,7 +108,7 @@ async def _perform_fichaje(tipo: str) -> bool:
                 state.write_fichaje_log(tipo, datetime.now(config.TZ).strftime('%Y-%m-%d %H:%M:%S'))
                 scheduler_logs.log_event(f'Fichaje de {tipo} completado.')
                 await scheduler_logs.notify_telegram(f'Fichaje de {tipo} completado.')
-                if tipo == 'salida':
+                if tipo == 'entrada':
                     await _auto_teamleader_entry()
             return success
         finally:
@@ -116,12 +116,33 @@ async def _perform_fichaje(tipo: str) -> bool:
 
 
 async def _auto_teamleader_entry() -> None:
-    """Create a Teamleader time entry automatically after a successful salida fichaje."""
+    """Create a Teamleader time entry automatically after a successful entrada fichaje."""
     config.refresh()
     if not config.TEAMLEADER_ENABLED or not config.TEAMLEADER_AUTO_ENTRY:
         return
     try:
         now = datetime.now(config.TZ)
+        today_iso = now.date().isoformat()
+        today_entries, refresh_updates = teamleader.list_time_entries(
+            today_iso,
+            today_iso,
+            apply_task_filter=False,
+        )
+        if refresh_updates:
+            config.persist_token_updates(refresh_updates)
+        if today_entries:
+            scheduler_logs.log_event('Registro automático en Teamleader omitido: ya existe un fichaje para hoy.')
+            return
+
+        yesterday = (now - timedelta(days=1)).date().isoformat()
+        yesterday_entries, refresh_updates = teamleader.list_time_entries(
+            yesterday,
+            yesterday,
+            apply_task_filter=False,
+        )
+        if refresh_updates:
+            config.persist_token_updates(refresh_updates)
+
         work_hours = schedule._get_work_hours(now)
         duration_seconds = int(work_hours * 3600)
         raw_start = config.TEAMLEADER_WORKDAY_START
@@ -130,6 +151,22 @@ async def _auto_teamleader_entry() -> None:
         subject_id = (config.TEAMLEADER_TASK_ID or '').strip() or None
         subject_type = (config.TEAMLEADER_TASK_TYPE or 'nextgenTask').strip()
         user_id = (config.TEAMLEADER_USER_ID or '').strip() or None
+        # Entries are sorted ascending by starts_on in Teamleader list API, so
+        # reverse to check the most recent one first. If no subject is found,
+        # configured values are used.
+        for entry in reversed(yesterday_entries):
+            if user_id and teamleader.extract_entry_user_id(entry) != user_id:
+                continue
+            previous_subject_id, previous_subject_type = teamleader.extract_entry_subject(entry)
+            if not previous_subject_id:
+                continue
+            subject_id = previous_subject_id
+            if previous_subject_type:
+                subject_type = previous_subject_type
+            scheduler_logs.log_event(
+                f'Registro automático Teamleader: usando tarea del día anterior ({subject_type}:{subject_id}).'
+            )
+            break
         _, refresh_updates = teamleader.add_time_entry(
             started_at=started_at,
             duration_seconds=duration_seconds,
