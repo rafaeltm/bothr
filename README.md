@@ -113,13 +113,15 @@ This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both st
 | `TEAMLEADER_CLIENT_ID` | No | Teamleader OAuth client ID. Required to connect Teamleader. |
 | `TEAMLEADER_CLIENT_SECRET` | No | Teamleader OAuth client secret. Required to connect Teamleader. |
 | `TEAMLEADER_REDIRECT_URI` | No | OAuth callback URL (must point to `/api/integrations/teamleader/callback`). |
-| `TEAMLEADER_AUTH_BASE_URL` | No | Teamleader OAuth base URL. Default: `https://app.teamleader.eu`. |
+| `TEAMLEADER_AUTH_BASE_URL` | No | Teamleader OAuth base URL. Default: `https://focus.teamleader.eu`. |
 | `TEAMLEADER_API_BASE_URL` | No | Teamleader API base URL. Default: `https://api.focus.teamleader.eu`. |
 | `TEAMLEADER_ACCESS_TOKEN` | No | Teamleader OAuth access token (managed automatically after connect). |
 | `TEAMLEADER_REFRESH_TOKEN` | No | Teamleader OAuth refresh token (managed automatically after connect). |
 | `TEAMLEADER_TOKEN_EXPIRES_AT` | No | ISO timestamp for Teamleader token expiration (managed automatically). |
 | `TEAMLEADER_ACCOUNT_ID` | No | Optional Teamleader account/organization identifier. |
 | `TEAMLEADER_TASK_ID` | No | Teamleader task UUID used in `timeTracking.list` as `filter.subject` with type `nextgenTask`. |
+| `TEAMLEADER_TASK_TYPE` | No | Subject type used together with `TEAMLEADER_TASK_ID` in `timeTracking.list`. Default: `nextgenTask`. |
+| `TEAMLEADER_PAGE_SIZE` | No | Page size (1-100) used to paginate and aggregate all `timeTracking.list` results. Default: `100`. |
 | `TEAMLEADER_WORKDAY_START` | No | Exact start time (`HH:MM`) used for Teamleader hour analysis. Default: `08:00`. |
 | `TEAMLEADER_WORKDAY_END` | No | Exact end time (`HH:MM`) used for Teamleader hour analysis. Default: `17:00`. |
 
@@ -193,7 +195,7 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
 2. Configure `TEAMLEADER_CLIENT_ID`, `TEAMLEADER_CLIENT_SECRET` and `TEAMLEADER_REDIRECT_URI`.
 3. Set redirect URI to this dashboard callback:
    - `https://<your-host>/api/integrations/teamleader/callback`
-4. In Settings, define `TEAMLEADER_TASK_ID` (task UUID used as `subject: { type: "nextgenTask", id: ... }`) and exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`); Teamleader analysis uses the same working calendar as the scheduler (weekends/holidays excluded).
+4. In Settings, define `TEAMLEADER_TASK_ID` (task UUID) and optionally `TEAMLEADER_TASK_TYPE` (default `nextgenTask`) so requests apply `subject: { type, id }`. You can also tune `TEAMLEADER_PAGE_SIZE` (1-100) for `timeTracking.list` pagination. Configure exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`); Teamleader analysis uses the same working calendar as the scheduler (weekends/holidays excluded).
 5. Use **Conectar Teamleader** in Settings to complete OAuth and persist tokens.
 
 ## Development setup

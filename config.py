@@ -43,6 +43,8 @@ MANAGED_ENV_KEYS = [
     "TEAMLEADER_TOKEN_EXPIRES_AT",
     "TEAMLEADER_ACCOUNT_ID",
     "TEAMLEADER_TASK_ID",
+    "TEAMLEADER_TASK_TYPE",
+    "TEAMLEADER_PAGE_SIZE",
     "TEAMLEADER_WORKDAY_START",
     "TEAMLEADER_WORKDAY_END",
 ]
@@ -74,13 +76,15 @@ TEAMLEADER_ENABLED: bool = False
 TEAMLEADER_CLIENT_ID: str | None = None
 TEAMLEADER_CLIENT_SECRET: str | None = None
 TEAMLEADER_REDIRECT_URI: str | None = None
-TEAMLEADER_AUTH_BASE_URL: str = "https://app.teamleader.eu"
+TEAMLEADER_AUTH_BASE_URL: str = "https://focus.teamleader.eu"
 TEAMLEADER_API_BASE_URL: str = "https://api.focus.teamleader.eu"
 TEAMLEADER_ACCESS_TOKEN: str | None = None
 TEAMLEADER_REFRESH_TOKEN: str | None = None
 TEAMLEADER_TOKEN_EXPIRES_AT: str | None = None
 TEAMLEADER_ACCOUNT_ID: str | None = None
 TEAMLEADER_TASK_ID: str | None = None
+TEAMLEADER_TASK_TYPE: str = "nextgenTask"
+TEAMLEADER_PAGE_SIZE: int = 100
 TEAMLEADER_WORKDAY_START: str = "08:00"
 TEAMLEADER_WORKDAY_END: str = "17:00"
 _file_locks_mutex = threading.Lock()
@@ -120,6 +124,11 @@ def _get_int(name: str, default: int) -> int:
         return int(value)
     except ValueError:
         return default
+
+
+def _get_bounded_int(name: str, default: int, minimum: int, maximum: int) -> int:
+    parsed = _get_int(name, default)
+    return max(minimum, min(maximum, parsed))
 
 
 def _get_time(name: str, default: time) -> time:
@@ -171,7 +180,7 @@ def refresh(force_file_override: bool = False) -> None:
             "TEAMLEADER_CLIENT_SECRET": os.getenv("TEAMLEADER_CLIENT_SECRET") or None,
             "TEAMLEADER_REDIRECT_URI": os.getenv("TEAMLEADER_REDIRECT_URI") or None,
             "TEAMLEADER_AUTH_BASE_URL": os.getenv("TEAMLEADER_AUTH_BASE_URL")
-            or "https://app.teamleader.eu",
+            or "https://focus.teamleader.eu",
             "TEAMLEADER_API_BASE_URL": os.getenv("TEAMLEADER_API_BASE_URL")
             or "https://api.focus.teamleader.eu",
             "TEAMLEADER_ACCESS_TOKEN": os.getenv("TEAMLEADER_ACCESS_TOKEN") or None,
@@ -179,6 +188,8 @@ def refresh(force_file_override: bool = False) -> None:
             "TEAMLEADER_TOKEN_EXPIRES_AT": os.getenv("TEAMLEADER_TOKEN_EXPIRES_AT") or None,
             "TEAMLEADER_ACCOUNT_ID": os.getenv("TEAMLEADER_ACCOUNT_ID") or None,
             "TEAMLEADER_TASK_ID": os.getenv("TEAMLEADER_TASK_ID") or None,
+            "TEAMLEADER_TASK_TYPE": os.getenv("TEAMLEADER_TASK_TYPE") or "nextgenTask",
+            "TEAMLEADER_PAGE_SIZE": _get_bounded_int("TEAMLEADER_PAGE_SIZE", 100, 1, 100),
             "TEAMLEADER_WORKDAY_START": os.getenv("TEAMLEADER_WORKDAY_START") or "08:00",
             "TEAMLEADER_WORKDAY_END": os.getenv("TEAMLEADER_WORKDAY_END") or "17:00",
         }
@@ -255,6 +266,8 @@ def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dic
         'TEAMLEADER_TOKEN_EXPIRES_AT': TEAMLEADER_TOKEN_EXPIRES_AT or '',
         'TEAMLEADER_ACCOUNT_ID': TEAMLEADER_ACCOUNT_ID or '',
         'TEAMLEADER_TASK_ID': TEAMLEADER_TASK_ID or '',
+        'TEAMLEADER_TASK_TYPE': TEAMLEADER_TASK_TYPE or '',
+        'TEAMLEADER_PAGE_SIZE': str(TEAMLEADER_PAGE_SIZE),
         'TEAMLEADER_WORKDAY_START': TEAMLEADER_WORKDAY_START or '',
         'TEAMLEADER_WORKDAY_END': TEAMLEADER_WORKDAY_END or '',
     }
