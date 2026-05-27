@@ -161,6 +161,12 @@
             <input class="form-control" type="time" name="TEAMLEADER_WORKDAY_END" value="{{ settings.TEAMLEADER_WORKDAY_END }}">
             <div class="form-text">Hora exacta de fin de jornada para el análisis de horas en Teamleader.</div>
           </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" role="switch" id="teamleaderAutoEntryToggle" name="TEAMLEADER_AUTO_ENTRY" {% if settings.TEAMLEADER_AUTO_ENTRY %}checked{% endif %}>
+              <label class="form-check-label" for="teamleaderAutoEntryToggle">TEAMLEADER_AUTO_ENTRY<br><small class="text-muted">Crear registro automáticamente al fichar la salida</small></label>
+            </div>
+          </div>
           <div class="col-md-4">
             <label class="form-label">TEAMLEADER_ACCOUNT_ID</label>
             <input class="form-control" name="TEAMLEADER_ACCOUNT_ID" value="{{ settings.TEAMLEADER_ACCOUNT_ID }}">
@@ -248,6 +254,7 @@
     }
     payload.ENABLE = document.getElementById('enableToggle').checked;
     payload.TEAMLEADER_ENABLED = document.getElementById('teamleaderEnabledToggle').checked;
+    payload.TEAMLEADER_AUTO_ENTRY = document.getElementById('teamleaderAutoEntryToggle').checked;
     return payload;
   }
 

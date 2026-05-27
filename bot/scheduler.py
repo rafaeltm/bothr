@@ -7,7 +7,7 @@ from datetime import datetime, time
 import config
 from bot import fichaje
 from bot import logs as scheduler_logs
-from bot import schedule, state
+from bot import schedule, state, teamleader
 from playwright.async_api import async_playwright
 
 scheduler_logs.setup_logger()
@@ -108,9 +108,43 @@ async def _perform_fichaje(tipo: str) -> bool:
                 state.write_fichaje_log(tipo, datetime.now(config.TZ).strftime('%Y-%m-%d %H:%M:%S'))
                 scheduler_logs.log_event(f'Fichaje de {tipo} completado.')
                 await scheduler_logs.notify_telegram(f'Fichaje de {tipo} completado.')
+                if tipo == 'salida':
+                    await _auto_teamleader_entry()
             return success
         finally:
             await browser.close()
+
+
+async def _auto_teamleader_entry() -> None:
+    """Create a Teamleader time entry automatically after a successful salida fichaje."""
+    config.refresh()
+    if not config.TEAMLEADER_ENABLED or not config.TEAMLEADER_AUTO_ENTRY:
+        return
+    try:
+        now = datetime.now(config.TZ)
+        work_hours = schedule._get_work_hours(now)
+        duration_seconds = int(work_hours * 3600)
+        raw_start = config.TEAMLEADER_WORKDAY_START
+        workday_start = time.fromisoformat(raw_start.strip()).replace(second=0, microsecond=0)
+        started_at = datetime.combine(now.date(), workday_start, tzinfo=config.TZ)
+        subject_id = (config.TEAMLEADER_TASK_ID or '').strip() or None
+        subject_type = (config.TEAMLEADER_TASK_TYPE or 'nextgenTask').strip()
+        user_id = (config.TEAMLEADER_USER_ID or '').strip() or None
+        _, refresh_updates = teamleader.add_time_entry(
+            started_at=started_at,
+            duration_seconds=duration_seconds,
+            subject_id=subject_id,
+            subject_type=subject_type,
+            user_id=user_id,
+        )
+        if refresh_updates:
+            config.persist_token_updates(refresh_updates)
+        msg = f'Registro Teamleader añadido automáticamente: {now.date().isoformat()} · {work_hours}h.'
+        scheduler_logs.log_event(msg)
+        await scheduler_logs.notify_telegram(msg)
+    except Exception as exc:
+        scheduler_logs.log_event(f'Error al añadir registro automático en Teamleader: {exc}', level=logging.WARNING)
+        await scheduler_logs.notify_telegram(f'Error al añadir registro automático en Teamleader: {exc}')
 
 
 async def run() -> None:
