@@ -20,14 +20,14 @@ Bothr automates daily clock-in and clock-out actions with Playwright and exposes
 docker-compose up --build -d
 ```
 
-4. Open the dashboard at `https://<YOUR_SERVER_IP>`.
+4. Open the dashboard at `https://<YOUR_SERVER_IP>` or `https://<YOUR_SERVER_IP>:5822`.
 5. Dashboard access is transparent at app level because deployment access is expected through VPN/network perimeter controls.
 
 > **Note:** The first time you access the dashboard you will get a browser warning unless you install the generated CA root certificate (`certs/ca.crt`) on your device. See [HTTPS / TLS setup](#https--tls-setup) below for per-OS instructions.
 
 ## HTTPS / TLS setup
 
-The stack uses a self-signed CA so that HTTPS works by IP address without any external domain or Let's Encrypt dependency. Nginx terminates TLS on port 443 and proxies traffic to the Flask app internally. Port 80 redirects to HTTPS automatically.
+The stack uses a self-signed CA so that HTTPS works by IP address without any external domain or Let's Encrypt dependency. Nginx terminates TLS and proxies traffic to the Flask app internally. Externally, HTTPS is exposed on ports `443` and `5822` (both mapped to the same internal TLS endpoint). Port 80 redirects to HTTPS automatically.
 
 ### Generating certificates
 
