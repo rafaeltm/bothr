@@ -126,10 +126,20 @@
             <input class="form-control" name="TEAMLEADER_TASK_ID" value="{{ settings.TEAMLEADER_TASK_ID }}">
             <div class="form-text">ID de la tarea de Teamleader usada como filtro para los fichajes. Déjalo vacío para listar todas las entradas.</div>
           </div>
+          <div class="col-md-3">
+            <label class="form-label">TEAMLEADER_TASK_TYPE</label>
+            <input class="form-control" name="TEAMLEADER_TASK_TYPE" value="{{ settings.TEAMLEADER_TASK_TYPE }}" placeholder="nextgenTask">
+            <div class="form-text">Tipo de subject para TEAMLEADER_TASK_ID (por ejemplo, <code>nextgenTask</code>).</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">TEAMLEADER_PAGE_SIZE</label>
+            <input class="form-control" type="number" min="1" max="100" name="TEAMLEADER_PAGE_SIZE" value="{{ settings.TEAMLEADER_PAGE_SIZE }}">
+            <div class="form-text">Número de registros por página en <code>timeTracking.list</code> (1-100).</div>
+          </div>
           <div class="col-md-6">
             <label class="form-label">TEAMLEADER_AUTH_BASE_URL</label>
-            <input class="form-control" name="TEAMLEADER_AUTH_BASE_URL" value="{{ settings.TEAMLEADER_AUTH_BASE_URL }}" placeholder="https://app.teamleader.eu">
-            <div class="form-text">URL base OAuth de Teamleader. Valor por defecto: <code>https://app.teamleader.eu</code>. Normalmente no es necesario cambiarlo.</div>
+            <input class="form-control" name="TEAMLEADER_AUTH_BASE_URL" value="{{ settings.TEAMLEADER_AUTH_BASE_URL }}" placeholder="https://focus.teamleader.eu">
+            <div class="form-text">URL base OAuth de Teamleader. Valor por defecto: <code>https://focus.teamleader.eu</code>. Normalmente no es necesario cambiarlo.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label">TEAMLEADER_API_BASE_URL</label>

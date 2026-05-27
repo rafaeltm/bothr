@@ -60,6 +60,7 @@ def _utc_now() -> datetime:
 _ALLOWED_TEAMLEADER_HOSTNAMES = {
     'teamleader.eu',
     'app.teamleader.eu',
+    'focus.teamleader.eu',
     'api.focus.teamleader.eu',
 }
 
@@ -94,7 +95,7 @@ def _extract_error(payload: dict[str, Any], fallback: str) -> str:
     if isinstance(errors, list) and errors:
         first_error = errors[0]
         if isinstance(first_error, dict):
-            message = first_error.get('message')
+            message = first_error.get('message') or first_error.get('title')
             if message:
                 return str(message)
     return fallback
@@ -146,7 +147,7 @@ def build_authorization_url() -> str:
             'state': state,
         }
     )
-    auth_base_url = _normalize_base_url(config.TEAMLEADER_AUTH_BASE_URL, 'https://app.teamleader.eu')
+    auth_base_url = _normalize_base_url(config.TEAMLEADER_AUTH_BASE_URL, 'https://focus.teamleader.eu')
     return f'{auth_base_url}/oauth2/authorize?{query_params}'
 
 
@@ -202,7 +203,7 @@ def _extract_token_values(payload: dict[str, Any]) -> dict[str, str]:
 
 
 def exchange_code_for_token(code: str) -> dict[str, str]:
-    token_base_url = _normalize_base_url(config.TEAMLEADER_AUTH_BASE_URL, 'https://app.teamleader.eu')
+    token_base_url = _normalize_base_url(config.TEAMLEADER_AUTH_BASE_URL, 'https://focus.teamleader.eu')
     payload = _build_token_payload('authorization_code', code=code)
     response = _http_post(f'{token_base_url}/oauth2/access_token', payload)
     return _extract_token_values(response)
@@ -211,7 +212,7 @@ def exchange_code_for_token(code: str) -> dict[str, str]:
 def refresh_access_token() -> dict[str, str]:
     if not config.TEAMLEADER_REFRESH_TOKEN:
         raise TeamleaderError('No hay refresh token configurado para Teamleader.')
-    token_base_url = _normalize_base_url(config.TEAMLEADER_AUTH_BASE_URL, 'https://app.teamleader.eu')
+    token_base_url = _normalize_base_url(config.TEAMLEADER_AUTH_BASE_URL, 'https://focus.teamleader.eu')
     payload = _build_token_payload('refresh_token', refresh_token=config.TEAMLEADER_REFRESH_TOKEN)
     response = _http_post(f'{token_base_url}/oauth2/access_token', payload)
     return _extract_token_values(response)
@@ -273,27 +274,52 @@ def _to_datetime_str(date_str: str, end_of_day: bool = False) -> str:
 
 
 def list_time_entries(started_after: str, started_before: str) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    try:
+        configured_page_size = int(getattr(config, 'TEAMLEADER_PAGE_SIZE', 100) or 100)
+    except (TypeError, ValueError):
+        configured_page_size = 100
+    page_size = max(1, min(100, configured_page_size))
+    task_type = str(getattr(config, 'TEAMLEADER_TASK_TYPE', 'nextgenTask') or 'nextgenTask').strip()
     filters: dict[str, Any] = {
         'started_after': _to_datetime_str(started_after, end_of_day=False),
         'started_before': _to_datetime_str(started_before, end_of_day=True),
     }
     if config.TEAMLEADER_TASK_ID:
         filters['subject'] = {
-            'type': 'nextgenTask',
+            'type': task_type,
             'id': config.TEAMLEADER_TASK_ID,
         }
-    payload = {
-        'filter': filters,
-        'sort': [
-            {
-                'field': 'started_at',
-                'order': 'asc',
-            }
-        ],
-    }
-    response, refresh_updates = api_call('timeTracking.list', payload)
-    data = response.get('data')
-    if not isinstance(data, list):
-        return [], refresh_updates
-    entries = [entry for entry in data if isinstance(entry, dict)]
+    entries: list[dict[str, Any]] = []
+    refresh_updates: dict[str, str] = {}
+    page_number = 1
+    while True:
+        payload = {
+            'filter': filters,
+            'sort': [
+                {
+                    'field': 'starts_on',
+                    'order': 'asc',
+                }
+            ],
+            'page': {
+                'size': page_size,
+                'number': page_number,
+            },
+        }
+        response, page_refresh_updates = api_call('timeTracking.list', payload)
+        refresh_updates.update(page_refresh_updates)
+        data = response.get('data')
+        if not isinstance(data, list):
+            break
+        page_entries = [entry for entry in data if isinstance(entry, dict)]
+        entries.extend(page_entries)
+        if len(page_entries) < page_size:
+            break
+        meta = response.get('meta')
+        if not isinstance(meta, dict):
+            break
+        matches = meta.get('matches')
+        if isinstance(matches, int) and len(entries) >= matches:
+            break
+        page_number += 1
     return entries, refresh_updates

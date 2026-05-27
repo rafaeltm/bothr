@@ -109,6 +109,23 @@ def save_settings():
                 return jsonify({'success': False, 'error': f'La {field_name} debe tener formato HH:MM.'}), 400
             current[key] = normalized
             continue
+        if key == 'TEAMLEADER_PAGE_SIZE':
+            raw_value = '' if value is None else str(value).strip()
+            if raw_value == '':
+                current[key] = '100'
+                continue
+            try:
+                parsed_size = int(raw_value)
+            except ValueError:
+                return jsonify({'success': False, 'error': 'TEAMLEADER_PAGE_SIZE debe ser un número entero entre 1 y 100.'}), 400
+            if parsed_size < 1 or parsed_size > 100:
+                return jsonify({'success': False, 'error': 'TEAMLEADER_PAGE_SIZE debe estar entre 1 y 100.'}), 400
+            current[key] = str(parsed_size)
+            continue
+        if key == 'TEAMLEADER_TASK_TYPE':
+            normalized_type = '' if value is None else str(value).strip()
+            current[key] = normalized_type or 'nextgenTask'
+            continue
         if isinstance(value, bool):
             current[key] = 'true' if value else 'false'
         elif value is None:
