@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 
@@ -224,14 +224,11 @@ def teamleader_test():
         return jsonify({'success': False, 'error': 'No se pudo verificar la conexión con Teamleader.'}), 500
 
 
-def _normalize_iso_datetime(raw_value: str) -> datetime:
+def _parse_iso_date(raw_value: str) -> date:
     normalized = raw_value.strip()
     if not normalized:
         raise ValueError('empty')
-    parsed = datetime.fromisoformat(normalized.replace('Z', '+00:00'))
-    if parsed.tzinfo is None:
-        raise ValueError('missing timezone')
-    return parsed
+    return date.fromisoformat(normalized)
 
 
 @settings_bp.get('/api/integrations/teamleader/entries')
@@ -243,18 +240,18 @@ def teamleader_entries():
     from_param = (request.args.get('from') or '').strip()
     to_param = (request.args.get('to') or '').strip()
     if not from_param or not to_param:
-        return jsonify({'success': False, 'error': 'Debes informar from y to en formato ISO 8601.'}), 400
+        return jsonify({'success': False, 'error': 'Debes informar from y to en formato YYYY-MM-DD.'}), 400
 
     try:
-        from_date = _normalize_iso_datetime(from_param)
-        to_date = _normalize_iso_datetime(to_param)
+        from_date = _parse_iso_date(from_param)
+        to_date = _parse_iso_date(to_param)
     except ValueError:
-        return jsonify({'success': False, 'error': 'from/to deben tener formato ISO 8601 válido.'}), 400
+        return jsonify({'success': False, 'error': 'from/to deben tener formato YYYY-MM-DD válido.'}), 400
     if to_date < from_date:
         return jsonify({'success': False, 'error': 'El rango de fechas es inválido.'}), 400
 
     try:
-        entries, refresh_updates = teamleader.list_time_entries(from_param, to_param)
+        entries, refresh_updates = teamleader.list_time_entries(from_date.isoformat(), to_date.isoformat())
         if refresh_updates:
             _persist_settings_updates(refresh_updates)
         return jsonify({'success': True, 'entries': entries, 'settings': _get_form_settings()})
@@ -298,13 +295,13 @@ def teamleader_analysis():
     from_param = (request.args.get('from') or '').strip()
     to_param = (request.args.get('to') or '').strip()
     if not from_param or not to_param:
-        return jsonify({'success': False, 'error': 'Debes informar from y to en formato ISO 8601.'}), 400
+        return jsonify({'success': False, 'error': 'Debes informar from y to en formato YYYY-MM-DD.'}), 400
 
     try:
-        from_date = _normalize_iso_datetime(from_param)
-        to_date = _normalize_iso_datetime(to_param)
+        from_date = _parse_iso_date(from_param)
+        to_date = _parse_iso_date(to_param)
     except ValueError:
-        return jsonify({'success': False, 'error': 'from/to deben tener formato ISO 8601 válido.'}), 400
+        return jsonify({'success': False, 'error': 'from/to deben tener formato YYYY-MM-DD válido.'}), 400
     if to_date < from_date:
         return jsonify({'success': False, 'error': 'El rango de fechas es inválido.'}), 400
 
@@ -329,16 +326,16 @@ def teamleader_analysis():
         return jsonify({'success': False, 'error': 'La jornada exacta debe tener fin posterior al inicio.'}), 400
 
     try:
-        entries, refresh_updates = teamleader.list_time_entries(from_param, to_param)
+        entries, refresh_updates = teamleader.list_time_entries(from_date.isoformat(), to_date.isoformat())
         if refresh_updates:
             _persist_settings_updates(refresh_updates)
         total_clocked_seconds = sum(_extract_duration_seconds(entry) for entry in entries)
         working_days = sum(
             1
-            for day_offset in range((to_date.date() - from_date.date()).days + 1)
+            for day_offset in range((to_date - from_date).days + 1)
             if schedule.is_working_day(
                 datetime.combine(
-                    from_date.date() + timedelta(days=day_offset),
+                    from_date + timedelta(days=day_offset),
                     time.min,
                     tzinfo=config.TZ,
                 )

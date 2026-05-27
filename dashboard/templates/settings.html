@@ -177,11 +177,11 @@
           </div>
           <div class="col-md-5">
             <label class="form-label">Desde</label>
-            <input class="form-control" type="datetime-local" id="teamleaderFrom">
+            <input class="form-control" type="date" id="teamleaderFrom">
           </div>
           <div class="col-md-5">
             <label class="form-label">Hasta</label>
-            <input class="form-control" type="datetime-local" id="teamleaderTo">
+            <input class="form-control" type="date" id="teamleaderTo">
           </div>
           <div class="col-md-2 d-flex align-items-end">
             <button class="btn btn-outline-dark w-100" id="teamleaderFetchBtn" type="button">Consultar</button>
@@ -260,8 +260,8 @@
       throw new Error('Selecciona un rango de fechas para consultar Teamleader.');
     }
     return {
-      from: new Date(fromValue).toISOString(),
-      to: new Date(toValue).toISOString()
+      from: fromValue,
+      to: toValue
     };
   }
 
