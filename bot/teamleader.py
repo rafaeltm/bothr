@@ -223,10 +223,23 @@ def test_connection() -> tuple[dict[str, Any], dict[str, str]]:
     return response, refresh_updates
 
 
+def _to_datetime_str(date_str: str, end_of_day: bool = False) -> str:
+    """Convert a YYYY-MM-DD date string to a full ISO 8601 datetime string.
+
+    The Teamleader API requires datetime strings (not bare dates) for the
+    ``started_after`` / ``started_before`` filter fields.  If the value already
+    contains a time component it is returned unchanged.
+    """
+    if 'T' in date_str or ' ' in date_str:
+        return date_str
+    time_part = 'T23:59:59+00:00' if end_of_day else 'T00:00:00+00:00'
+    return date_str + time_part
+
+
 def list_time_entries(started_after: str, started_before: str) -> tuple[list[dict[str, Any]], dict[str, str]]:
     filters: dict[str, Any] = {
-        'started_after': started_after,
-        'started_before': started_before,
+        'started_after': _to_datetime_str(started_after, end_of_day=False),
+        'started_before': _to_datetime_str(started_before, end_of_day=True),
     }
     if config.TEAMLEADER_TASK_ID:
         filters['task_id'] = config.TEAMLEADER_TASK_ID
