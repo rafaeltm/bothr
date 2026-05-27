@@ -17,6 +17,7 @@
             <div class="status-box">
               <div class="text-muted small">🕒 Próxima acción</div>
               <div class="fs-4 fw-semibold" id="nextAction">-</div>
+              <div class="small text-muted mt-1" id="mainNextTeamleader">Teamleader próximo: -</div>
             </div>
           </div>
           <div class="col-lg-3 col-md-6">
@@ -192,6 +193,7 @@
     document.getElementById('teamleaderPeriodTotal').textContent = '-';
     document.getElementById('teamleaderPeriodRange').textContent = '-';
     document.getElementById('teamleaderNextEntry').textContent = '-';
+    document.getElementById('mainNextTeamleader').textContent = 'Teamleader próximo: -';
     document.getElementById('teamleaderAddEntryBtn').disabled = true;
   }
 
@@ -213,7 +215,9 @@
       document.getElementById('teamleaderPeriodTotal').textContent = formatDuration(summary.total_seconds);
       document.getElementById('teamleaderPeriodRange').textContent =
         `${summary.period_label || '-'} · ${summary.from || '-'} → ${summary.to || '-'}`;
-      document.getElementById('teamleaderNextEntry').textContent = formatTeamleaderNextEntry(summary.next_entry_preview);
+      const nextEntryLabel = formatTeamleaderNextEntry(summary.next_entry_preview);
+      document.getElementById('teamleaderNextEntry').textContent = nextEntryLabel;
+      document.getElementById('mainNextTeamleader').textContent = `Teamleader próximo: ${nextEntryLabel}`;
     } catch (error) {
       setTeamleaderUnavailable('No disponible');
       if (showErrorToast) {
