@@ -255,8 +255,14 @@ def teamleader_entries():
         if refresh_updates:
             _persist_settings_updates(refresh_updates)
         return jsonify({'success': True, 'entries': entries, 'settings': _get_form_settings()})
-    except teamleader.TeamleaderError:
-        return jsonify({'success': False, 'error': 'No se pudieron obtener los fichajes de Teamleader.'}), 400
+    except teamleader.TeamleaderError as exc:
+        logger.warning('Error al obtener fichajes de Teamleader: %s', exc)
+        return jsonify(
+            {
+                'success': False,
+                'error': teamleader.get_last_error_message('No se pudieron obtener los fichajes de Teamleader.'),
+            }
+        ), 400
     except Exception:
         logger.exception('No se pudieron obtener los fichajes de Teamleader.')
         return jsonify({'success': False, 'error': 'No se pudieron obtener los fichajes de Teamleader.'}), 500
@@ -356,8 +362,14 @@ def teamleader_analysis():
                 'settings': _get_form_settings(),
             }
         )
-    except teamleader.TeamleaderError:
-        return jsonify({'success': False, 'error': 'No se pudo calcular el análisis de horas de Teamleader.'}), 400
+    except teamleader.TeamleaderError as exc:
+        logger.warning('Error al calcular análisis de Teamleader: %s', exc)
+        return jsonify(
+            {
+                'success': False,
+                'error': teamleader.get_last_error_message('No se pudo calcular el análisis de horas de Teamleader.'),
+            }
+        ), 400
     except Exception:
         logger.exception('No se pudo calcular el análisis de horas de Teamleader.')
         return jsonify({'success': False, 'error': 'No se pudo calcular el análisis de horas de Teamleader.'}), 500

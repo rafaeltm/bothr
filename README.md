@@ -119,7 +119,7 @@ This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both st
 | `TEAMLEADER_REFRESH_TOKEN` | No | Teamleader OAuth refresh token (managed automatically after connect). |
 | `TEAMLEADER_TOKEN_EXPIRES_AT` | No | ISO timestamp for Teamleader token expiration (managed automatically). |
 | `TEAMLEADER_ACCOUNT_ID` | No | Optional Teamleader account/organization identifier. |
-| `TEAMLEADER_TASK_ID` | No | Teamleader task ID to use as filter for fichajes/time entries. |
+| `TEAMLEADER_TASK_ID` | No | Teamleader task UUID used in `timeTracking.list` as `filter.subject` with type `nextgenTask`. |
 | `TEAMLEADER_WORKDAY_START` | No | Exact start time (`HH:MM`) used for Teamleader hour analysis. Default: `08:00`. |
 | `TEAMLEADER_WORKDAY_END` | No | Exact end time (`HH:MM`) used for Teamleader hour analysis. Default: `17:00`. |
 
@@ -193,7 +193,7 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
 2. Configure `TEAMLEADER_CLIENT_ID`, `TEAMLEADER_CLIENT_SECRET` and `TEAMLEADER_REDIRECT_URI`.
 3. Set redirect URI to this dashboard callback:
    - `https://<your-host>/api/integrations/teamleader/callback`
-4. In Settings, define `TEAMLEADER_TASK_ID` and exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`); Teamleader analysis uses the same working calendar as the scheduler (weekends/holidays excluded).
+4. In Settings, define `TEAMLEADER_TASK_ID` (task UUID used as `subject: { type: "nextgenTask", id: ... }`) and exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`); Teamleader analysis uses the same working calendar as the scheduler (weekends/holidays excluded).
 5. Use **Conectar Teamleader** in Settings to complete OAuth and persist tokens.
 
 ## Development setup

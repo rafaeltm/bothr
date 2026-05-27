@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import threading
 from datetime import datetime, timedelta, timezone
@@ -12,12 +13,44 @@ from urllib.request import Request, urlopen
 import config
 
 _STATE_TTL = timedelta(minutes=10)
+_MAX_PUBLIC_ERROR_LENGTH = 300
 _oauth_states_lock = threading.Lock()
 _oauth_states: dict[str, datetime] = {}
+_last_error_state = threading.local()
+_STACK_TRACE_MARKERS = ('traceback', 'file "', 'line ')
+_PUBLIC_ERROR_ALLOWED_PATTERN = re.compile(r'^[\w\s.,:;()\-_/!?]+$')
 
 
 class TeamleaderError(RuntimeError):
     """Raised when Teamleader integration operations fail."""
+
+
+def _sanitize_public_error(message: str, fallback: str) -> str:
+    normalized = (message or '').strip()
+    if not normalized:
+        return fallback
+    first_line = normalized.splitlines()[0].strip()
+    if not first_line:
+        return fallback
+    lowered = first_line.lower()
+    if any(marker in lowered for marker in _STACK_TRACE_MARKERS):
+        return fallback
+    if 'password' in lowered or 'secret' in lowered or 'token' in lowered or '://' in first_line:
+        return fallback
+    if not _PUBLIC_ERROR_ALLOWED_PATTERN.match(first_line):
+        return fallback
+    return first_line[:_MAX_PUBLIC_ERROR_LENGTH]
+
+
+def _set_last_error_message(message: str, fallback: str) -> None:
+    safe_message = _sanitize_public_error(message, fallback)
+    _last_error_state.message = safe_message
+
+
+def get_last_error_message(fallback: str) -> str:
+    message = getattr(_last_error_state, 'message', None)
+    _last_error_state.message = None
+    return message or fallback
 
 
 def _utc_now() -> datetime:
@@ -83,9 +116,12 @@ def _http_post(url: str, body: dict[str, Any], headers: dict[str, str] | None = 
     except HTTPError as exc:
         response_payload = _parse_json_response(exc.read())
         message = _extract_error(response_payload, f'Error HTTP {exc.code} al contactar Teamleader.')
+        _set_last_error_message(message, 'No se pudo completar la operación en Teamleader.')
         raise TeamleaderError(message) from exc
     except URLError as exc:
-        raise TeamleaderError('No se pudo conectar con Teamleader.') from exc
+        message = 'No se pudo conectar con Teamleader.'
+        _set_last_error_message(message, message)
+        raise TeamleaderError(message) from exc
 
 
 def _cleanup_expired_states() -> None:
@@ -242,7 +278,10 @@ def list_time_entries(started_after: str, started_before: str) -> tuple[list[dic
         'started_before': _to_datetime_str(started_before, end_of_day=True),
     }
     if config.TEAMLEADER_TASK_ID:
-        filters['task_id'] = config.TEAMLEADER_TASK_ID
+        filters['subject'] = {
+            'type': 'nextgenTask',
+            'id': config.TEAMLEADER_TASK_ID,
+        }
     payload = {
         'filter': filters,
         'sort': [
