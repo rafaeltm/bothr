@@ -310,12 +310,33 @@ def _format_env_value(value: str) -> str:
 def write_managed_env(values: dict[str, str]) -> None:
     lines = [f'{key}={_format_env_value(values.get(key, ""))}' for key in MANAGED_ENV_KEYS]
     payload = '\n'.join(lines) + '\n'
-    ENV_FILE.write_text(payload, encoding='utf-8')
-    ENV_FILE.chmod(0o600)
+    backup: dict[Path, tuple[bool, str]] = {}
+    for path in (ENV_FILE, RUNTIME_ENV_FILE):
+        try:
+            backup[path] = (True, path.read_text(encoding='utf-8'))
+        except FileNotFoundError:
+            backup[path] = (False, '')
 
-    RUNTIME_ENV_FILE.parent.mkdir(parents=True, exist_ok=True)
-    RUNTIME_ENV_FILE.write_text(payload, encoding='utf-8')
-    RUNTIME_ENV_FILE.chmod(0o600)
+    try:
+        for path in (ENV_FILE, RUNTIME_ENV_FILE):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(payload, encoding='utf-8')
+            try:
+                path.chmod(0o600)
+            except OSError:
+                # chmod may not be supported on some local dev platforms.
+                pass
+    except Exception:
+        for path, (existed, previous_content) in backup.items():
+            if existed:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(previous_content, encoding='utf-8')
+            else:
+                try:
+                    path.unlink()
+                except FileNotFoundError:
+                    pass
+        raise
 
 
 def persist_token_updates(updates: dict[str, object]) -> None:
