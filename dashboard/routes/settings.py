@@ -353,7 +353,7 @@ def _resolve_next_teamleader_preview(today: date, has_today_entry: bool) -> dict
     for _ in range(schedule.MAX_WORKDAY_LOOKAHEAD_DAYS):
         target_reference = datetime.combine(target_date, time.min, tzinfo=config.TZ)
         if schedule.is_working_day(target_reference):
-            work_hours = schedule._get_work_hours(target_reference)
+            work_hours = schedule.get_work_hours(target_reference)
             duration_seconds = int(work_hours * 3600)
             started_at = datetime.combine(target_date, workday_start, tzinfo=config.TZ)
             return {

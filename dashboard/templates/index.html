@@ -177,7 +177,9 @@
     const startedAt = String(preview.started_at || '');
     const hhmm = startedAt.length >= 16 ? startedAt.slice(11, 16) : '--:--';
     const hours = Number(preview.hours);
-    const hoursLabel = Number.isFinite(hours) ? `${hours}h` : '-';
+    const hoursLabel = Number.isFinite(hours)
+      ? `${Number.isInteger(hours) ? hours : hours.toFixed(1)}h`
+      : '-';
     return `${preview.date} · ${hhmm} · ${hoursLabel}`;
   }
 
