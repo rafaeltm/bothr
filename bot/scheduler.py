@@ -108,7 +108,7 @@ async def _perform_fichaje(tipo: str) -> bool:
                 state.write_fichaje_log(tipo, datetime.now(config.TZ).strftime('%Y-%m-%d %H:%M:%S'))
                 scheduler_logs.log_event(f'Fichaje de {tipo} completado.')
                 await scheduler_logs.notify_telegram(f'Fichaje de {tipo} completado.')
-                if tipo == 'salida':
+                if tipo == 'entrada':
                     await _auto_teamleader_entry()
             return success
         finally:
@@ -116,12 +116,18 @@ async def _perform_fichaje(tipo: str) -> bool:
 
 
 async def _auto_teamleader_entry() -> None:
-    """Create a Teamleader time entry automatically after a successful salida fichaje."""
+    """Create a Teamleader time entry automatically after a successful entrada fichaje."""
     config.refresh()
     if not config.TEAMLEADER_ENABLED or not config.TEAMLEADER_AUTO_ENTRY:
         return
     try:
         now = datetime.now(config.TZ)
+        entries, refresh_updates = teamleader.list_time_entries(now.date().isoformat(), now.date().isoformat())
+        if refresh_updates:
+            config.persist_token_updates(refresh_updates)
+        if entries:
+            scheduler_logs.log_event('Registro automático en Teamleader omitido: ya existe un fichaje para hoy.')
+            return
         work_hours = schedule._get_work_hours(now)
         duration_seconds = int(work_hours * 3600)
         raw_start = config.TEAMLEADER_WORKDAY_START
