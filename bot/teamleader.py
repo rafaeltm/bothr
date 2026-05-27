@@ -225,15 +225,11 @@ def test_connection() -> tuple[dict[str, Any], dict[str, str]]:
 
 def list_time_entries(started_after: str, started_before: str) -> tuple[list[dict[str, Any]], dict[str, str]]:
     filters: dict[str, Any] = {
-        'started_at': {
-            'gte': started_after,
-            'lte': started_before,
-        }
+        'started_after': started_after,
+        'started_before': started_before,
     }
     if config.TEAMLEADER_TASK_ID:
-        filters['task'] = {
-            'id': config.TEAMLEADER_TASK_ID,
-        }
+        filters['task_id'] = config.TEAMLEADER_TASK_ID
     payload = {
         'filter': filters,
         'sort': [
