@@ -86,53 +86,77 @@
             <h2 class="h5 mb-1">Integración Teamleader</h2>
             <p class="text-muted mb-0">Conecta Teamleader, define la tarea a fichar y configura jornada exacta.</p>
           </div>
+          <div class="col-12">
+            <div class="alert alert-info py-2 px-3 mb-0 small">
+              <strong>Configuración en Teamleader Marketplace:</strong>
+              <ol class="mb-0 mt-1 ps-3">
+                <li>Crea una integración en el <a href="https://marketplace.teamleader.eu" target="_blank" rel="noopener">Teamleader Marketplace</a> (o en la sección de OAuth de tu cuenta).</li>
+                <li>En la integración, indica como <strong>Redirect URI / Callback URL</strong>: <code>https://&lt;tu-host&gt;/api/integrations/teamleader/callback</code></li>
+                <li>Copia el <strong>Client ID</strong> y el <strong>Client Secret</strong> generados y pégalos en los campos de abajo.</li>
+                <li>Guarda los cambios y pulsa <strong>Conectar Teamleader</strong> para completar el login OAuth.</li>
+                <li>Los tokens (<em>access token</em>, <em>refresh token</em> y <em>account ID</em>) se guardan automáticamente tras conectar; no hace falta rellenarlos a mano.</li>
+              </ol>
+            </div>
+          </div>
           <div class="col-md-6">
             <label class="form-label">TEAMLEADER_CLIENT_ID</label>
             <input class="form-control" name="TEAMLEADER_CLIENT_ID" value="{{ settings.TEAMLEADER_CLIENT_ID }}">
+            <div class="form-text">Client ID de la integración OAuth de Teamleader.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label">TEAMLEADER_CLIENT_SECRET</label>
             <input class="form-control" type="password" name="TEAMLEADER_CLIENT_SECRET" value="{{ settings.TEAMLEADER_CLIENT_SECRET }}">
+            <div class="form-text">Client Secret de la integración OAuth de Teamleader.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label">TEAMLEADER_REDIRECT_URI</label>
-            <input class="form-control" name="TEAMLEADER_REDIRECT_URI" value="{{ settings.TEAMLEADER_REDIRECT_URI }}">
+            <input class="form-control" name="TEAMLEADER_REDIRECT_URI" value="{{ settings.TEAMLEADER_REDIRECT_URI }}" placeholder="https://<tu-host>/api/integrations/teamleader/callback">
+            <div class="form-text">Debe coincidir exactamente con la Redirect URI configurada en Teamleader.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label">TEAMLEADER_TASK_ID</label>
             <input class="form-control" name="TEAMLEADER_TASK_ID" value="{{ settings.TEAMLEADER_TASK_ID }}">
+            <div class="form-text">ID de la tarea de Teamleader usada como filtro para los fichajes. Déjalo vacío para listar todas las entradas.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label">TEAMLEADER_AUTH_BASE_URL</label>
-            <input class="form-control" name="TEAMLEADER_AUTH_BASE_URL" value="{{ settings.TEAMLEADER_AUTH_BASE_URL }}">
+            <input class="form-control" name="TEAMLEADER_AUTH_BASE_URL" value="{{ settings.TEAMLEADER_AUTH_BASE_URL }}" placeholder="https://app.teamleader.eu">
+            <div class="form-text">URL base OAuth de Teamleader. Valor por defecto: <code>https://app.teamleader.eu</code>. Normalmente no es necesario cambiarlo.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label">TEAMLEADER_API_BASE_URL</label>
-            <input class="form-control" name="TEAMLEADER_API_BASE_URL" value="{{ settings.TEAMLEADER_API_BASE_URL }}">
+            <input class="form-control" name="TEAMLEADER_API_BASE_URL" value="{{ settings.TEAMLEADER_API_BASE_URL }}" placeholder="https://api.focus.teamleader.eu">
+            <div class="form-text">URL base de la API de Teamleader. Valor por defecto: <code>https://api.focus.teamleader.eu</code>. Normalmente no es necesario cambiarlo.</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">TEAMLEADER_WORKDAY_START (HH:MM)</label>
             <input class="form-control" type="time" name="TEAMLEADER_WORKDAY_START" value="{{ settings.TEAMLEADER_WORKDAY_START }}">
+            <div class="form-text">Hora exacta de inicio de jornada para el análisis de horas en Teamleader.</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">TEAMLEADER_WORKDAY_END (HH:MM)</label>
             <input class="form-control" type="time" name="TEAMLEADER_WORKDAY_END" value="{{ settings.TEAMLEADER_WORKDAY_END }}">
+            <div class="form-text">Hora exacta de fin de jornada para el análisis de horas en Teamleader.</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">TEAMLEADER_ACCOUNT_ID</label>
             <input class="form-control" name="TEAMLEADER_ACCOUNT_ID" value="{{ settings.TEAMLEADER_ACCOUNT_ID }}">
+            <div class="form-text">Se rellena automáticamente al conectar. No es necesario introducirlo manualmente.</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">TEAMLEADER_ACCESS_TOKEN</label>
             <input class="form-control" type="password" name="TEAMLEADER_ACCESS_TOKEN" value="{{ settings.TEAMLEADER_ACCESS_TOKEN }}">
+            <div class="form-text">Se gestiona automáticamente tras conectar. No es necesario introducirlo manualmente.</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">TEAMLEADER_REFRESH_TOKEN</label>
             <input class="form-control" type="password" name="TEAMLEADER_REFRESH_TOKEN" value="{{ settings.TEAMLEADER_REFRESH_TOKEN }}">
+            <div class="form-text">Se gestiona automáticamente tras conectar. No es necesario introducirlo manualmente.</div>
           </div>
           <div class="col-md-4">
             <label class="form-label">TEAMLEADER_TOKEN_EXPIRES_AT</label>
             <input class="form-control" name="TEAMLEADER_TOKEN_EXPIRES_AT" value="{{ settings.TEAMLEADER_TOKEN_EXPIRES_AT }}" placeholder="2026-05-27T17:00:00+00:00">
+            <div class="form-text">Fecha de expiración del token. Se actualiza automáticamente al conectar o refrescar.</div>
           </div>
           <div class="col-12 d-flex flex-wrap gap-2">
             <button class="btn btn-outline-primary" id="teamleaderConnectBtn" type="button">Conectar Teamleader</button>
