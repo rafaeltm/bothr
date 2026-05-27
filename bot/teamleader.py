@@ -278,9 +278,23 @@ def _to_datetime_str(date_str: str, end_of_day: bool = False) -> str:
     return datetime.combine(local_date, local_time, tzinfo=config.TZ).isoformat()
 
 
+def _extract_entry_user_id(entry: dict[str, Any]) -> str:
+    direct_user_id = entry.get('user_id')
+    if isinstance(direct_user_id, str):
+        return direct_user_id.strip()
+    for key in ('user', 'employee', 'worker', 'performed_by'):
+        user_ref = entry.get(key)
+        if isinstance(user_ref, dict):
+            user_id = user_ref.get('id')
+            if isinstance(user_id, str):
+                return user_id.strip()
+    return ''
+
+
 def list_time_entries(started_after: str, started_before: str) -> tuple[list[dict[str, Any]], dict[str, str]]:
     page_size = config.TEAMLEADER_PAGE_SIZE
     task_type = str(config.TEAMLEADER_TASK_TYPE).strip()
+    configured_user_id = (config.TEAMLEADER_USER_ID or '').strip()
     filters: dict[str, Any] = {
         'started_after': _to_datetime_str(started_after, end_of_day=False),
         'started_before': _to_datetime_str(started_before, end_of_day=True),
@@ -313,6 +327,10 @@ def list_time_entries(started_after: str, started_before: str) -> tuple[list[dic
         if not isinstance(data, list):
             break
         page_entries = [entry for entry in data if isinstance(entry, dict)]
+        if configured_user_id:
+            page_entries = [
+                entry for entry in page_entries if _extract_entry_user_id(entry) == configured_user_id
+            ]
         entries.extend(page_entries)
         if len(page_entries) < page_size:
             break

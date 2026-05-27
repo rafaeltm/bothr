@@ -42,6 +42,7 @@ MANAGED_ENV_KEYS = [
     "TEAMLEADER_REFRESH_TOKEN",
     "TEAMLEADER_TOKEN_EXPIRES_AT",
     "TEAMLEADER_ACCOUNT_ID",
+    "TEAMLEADER_USER_ID",
     "TEAMLEADER_TASK_ID",
     "TEAMLEADER_TASK_TYPE",
     "TEAMLEADER_PAGE_SIZE",
@@ -82,6 +83,7 @@ TEAMLEADER_ACCESS_TOKEN: str | None = None
 TEAMLEADER_REFRESH_TOKEN: str | None = None
 TEAMLEADER_TOKEN_EXPIRES_AT: str | None = None
 TEAMLEADER_ACCOUNT_ID: str | None = None
+TEAMLEADER_USER_ID: str | None = None
 TEAMLEADER_TASK_ID: str | None = None
 TEAMLEADER_TASK_TYPE: str = "nextgenTask"
 TEAMLEADER_PAGE_SIZE: int = 100
@@ -187,6 +189,7 @@ def refresh(force_file_override: bool = False) -> None:
             "TEAMLEADER_REFRESH_TOKEN": os.getenv("TEAMLEADER_REFRESH_TOKEN") or None,
             "TEAMLEADER_TOKEN_EXPIRES_AT": os.getenv("TEAMLEADER_TOKEN_EXPIRES_AT") or None,
             "TEAMLEADER_ACCOUNT_ID": os.getenv("TEAMLEADER_ACCOUNT_ID") or None,
+            "TEAMLEADER_USER_ID": os.getenv("TEAMLEADER_USER_ID") or None,
             "TEAMLEADER_TASK_ID": os.getenv("TEAMLEADER_TASK_ID") or None,
             "TEAMLEADER_TASK_TYPE": os.getenv("TEAMLEADER_TASK_TYPE") or "nextgenTask",
             "TEAMLEADER_PAGE_SIZE": _get_bounded_int("TEAMLEADER_PAGE_SIZE", 100, 1, 100),
@@ -265,6 +268,7 @@ def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dic
         'TEAMLEADER_REFRESH_TOKEN': TEAMLEADER_REFRESH_TOKEN or '',
         'TEAMLEADER_TOKEN_EXPIRES_AT': TEAMLEADER_TOKEN_EXPIRES_AT or '',
         'TEAMLEADER_ACCOUNT_ID': TEAMLEADER_ACCOUNT_ID or '',
+        'TEAMLEADER_USER_ID': TEAMLEADER_USER_ID or '',
         'TEAMLEADER_TASK_ID': TEAMLEADER_TASK_ID or '',
         'TEAMLEADER_TASK_TYPE': TEAMLEADER_TASK_TYPE or '',
         'TEAMLEADER_PAGE_SIZE': str(TEAMLEADER_PAGE_SIZE),
