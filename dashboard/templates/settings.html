@@ -208,6 +208,37 @@
           <div class="col-12">
             <div class="small text-muted" id="teamleaderAnalysisSummary">Análisis pendiente.</div>
           </div>
+
+          <div class="col-12 mt-2">
+            <h3 class="h6 mb-2">Añadir registro Teamleader</h3>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Fecha</label>
+            <input class="form-control" type="date" id="teamleaderAddDate">
+            <div class="form-text">Fecha del registro (por defecto: hoy).</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Horas</label>
+            <select class="form-select" id="teamleaderAddHours">
+              <option value="9">9h (jornada completa)</option>
+              <option value="7">7h (jornada reducida)</option>
+              <option value="custom">Personalizado…</option>
+            </select>
+          </div>
+          <div class="col-md-2" id="teamleaderAddHoursCustomWrapper" style="display:none;">
+            <label class="form-label">Horas exactas</label>
+            <input class="form-control" type="number" id="teamleaderAddHoursCustom" min="0.5" max="24" step="0.5" value="8">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Descripción (opcional)</label>
+            <input class="form-control" id="teamleaderAddDescription" placeholder="Trabajo del día">
+          </div>
+          <div class="col-12">
+            <button class="btn btn-success" id="teamleaderAddEntryBtn" type="button">Añadir registro</button>
+          </div>
+          <div class="col-12">
+            <div class="small" id="teamleaderAddResult"></div>
+          </div>
         </form>
       </div>
     </div>
@@ -224,7 +255,12 @@
     'teamleaderDisconnectBtn',
     'teamleaderFetchBtn',
     'teamleaderFrom',
-    'teamleaderTo'
+    'teamleaderTo',
+    'teamleaderAddEntryBtn',
+    'teamleaderAddDate',
+    'teamleaderAddHours',
+    'teamleaderAddHoursCustom',
+    'teamleaderAddDescription'
   ];
 
   function isTeamleaderEnabled() {
@@ -397,6 +433,69 @@
   });
 
   document.getElementById('teamleaderEnabledToggle').addEventListener('change', syncTeamleaderControls);
+
+  document.getElementById('teamleaderAddHours').addEventListener('change', function () {
+    const customWrapper = document.getElementById('teamleaderAddHoursCustomWrapper');
+    customWrapper.style.display = this.value === 'custom' ? '' : 'none';
+  });
+
+  // Default add-date to today
+  (function () {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('teamleaderAddDate').value = `${yyyy}-${mm}-${dd}`;
+    // Auto-select 7h on Fridays
+    if (today.getDay() === 5) {
+      document.getElementById('teamleaderAddHours').value = '7';
+    }
+  })();
+
+  document.getElementById('teamleaderAddEntryBtn').addEventListener('click', async () => {
+    const resultEl = document.getElementById('teamleaderAddResult');
+    resultEl.textContent = '';
+    try {
+      if (!isTeamleaderEnabled()) {
+        throw new Error('La integración de Teamleader está desactivada.');
+      }
+      const dateValue = document.getElementById('teamleaderAddDate').value;
+      const hoursSelect = document.getElementById('teamleaderAddHours').value;
+      let hoursValue;
+      if (hoursSelect === 'custom') {
+        hoursValue = parseFloat(document.getElementById('teamleaderAddHoursCustom').value);
+        if (isNaN(hoursValue) || hoursValue <= 0) {
+          throw new Error('Introduce un número de horas válido.');
+        }
+      } else {
+        hoursValue = parseFloat(hoursSelect);
+      }
+      const description = document.getElementById('teamleaderAddDescription').value.trim();
+      const body = { hours: hoursValue };
+      if (dateValue) body.date = dateValue;
+      if (description) body.description = description;
+
+      const response = await fetch('/api/integrations/teamleader/add-entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo añadir el registro en Teamleader.');
+      }
+      applySettings(data.settings);
+      const msg = `Registro añadido: ${data.date} · ${data.hours}h · ID: ${data.entry_id || '(sin ID)'}`;
+      resultEl.className = 'small text-success';
+      resultEl.textContent = msg;
+      window.showToast(msg);
+    } catch (error) {
+      resultEl.className = 'small text-danger';
+      resultEl.textContent = error.message;
+      window.showToast(error.message, true);
+    }
+  });
+
   syncTeamleaderControls();
 </script>
 {% endblock %}

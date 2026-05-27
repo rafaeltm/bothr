@@ -482,6 +482,89 @@ def teamleader_dashboard_summary():
         return jsonify({'success': False, 'error': 'No se pudo obtener el resumen de Teamleader.'}), 500
 
 
+@settings_bp.post('/api/integrations/teamleader/add-entry')
+@auth.login_required
+def teamleader_add_entry():
+    disabled_response = _teamleader_disabled_response()
+    if disabled_response:
+        return disabled_response
+
+    body = request.get_json(silent=True) or {}
+    date_param = (body.get('date') or '').strip()
+    hours_param = body.get('hours')
+    description_param = (body.get('description') or '').strip() or None
+
+    today = datetime.now(config.TZ).date()
+    if date_param:
+        try:
+            entry_date = _parse_iso_date(date_param)
+        except ValueError:
+            return jsonify({'success': False, 'error': 'date debe tener formato YYYY-MM-DD válido.'}), 400
+    else:
+        entry_date = today
+
+    if hours_param is not None:
+        try:
+            hours_value = float(hours_param)
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'hours debe ser un número.'}), 400
+        if hours_value <= 0:
+            return jsonify({'success': False, 'error': 'hours debe ser mayor que cero.'}), 400
+    else:
+        # Default: 7h on Fridays (jornada reducida), 9h otherwise
+        hours_value = 7.0 if entry_date.weekday() == 4 else 9.0
+
+    duration_seconds = int(hours_value * 3600)
+
+    try:
+        workday_start = _parse_hhmm(config.TEAMLEADER_WORKDAY_START)
+    except (TypeError, ValueError):
+        return jsonify(
+            {'success': False, 'error': 'Configura TEAMLEADER_WORKDAY_START en formato HH:MM.'}
+        ), 400
+
+    started_at = datetime.combine(entry_date, workday_start, tzinfo=config.TZ)
+
+    subject_id = (config.TEAMLEADER_TASK_ID or '').strip() or None
+    subject_type = (config.TEAMLEADER_TASK_TYPE or 'nextgenTask').strip()
+    user_id = (config.TEAMLEADER_USER_ID or '').strip() or None
+
+    try:
+        response, refresh_updates = teamleader.add_time_entry(
+            started_at=started_at,
+            duration_seconds=duration_seconds,
+            subject_id=subject_id,
+            subject_type=subject_type,
+            description=description_param,
+            user_id=user_id,
+        )
+        if refresh_updates:
+            _persist_settings_updates(refresh_updates)
+        entry_data = response.get('data') or {}
+        entry_id = entry_data.get('id') if isinstance(entry_data, dict) else None
+        return jsonify(
+            {
+                'success': True,
+                'entry_id': entry_id,
+                'date': entry_date.isoformat(),
+                'hours': hours_value,
+                'started_at': started_at.isoformat(),
+                'settings': _get_form_settings(),
+            }
+        )
+    except teamleader.TeamleaderError as exc:
+        logger.warning('Error al añadir registro en Teamleader: %s', exc)
+        return jsonify(
+            {
+                'success': False,
+                'error': teamleader.get_last_error_message('No se pudo añadir el registro en Teamleader.'),
+            }
+        ), 400
+    except Exception:
+        logger.exception('No se pudo añadir el registro en Teamleader.')
+        return jsonify({'success': False, 'error': 'No se pudo añadir el registro en Teamleader.'}), 500
+
+
 @settings_bp.post('/api/test-telegram')
 @auth.login_required
 def test_telegram():
