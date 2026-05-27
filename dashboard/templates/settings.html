@@ -12,6 +12,11 @@
           </div>
           <button class="btn btn-outline-primary" id="testTelegramBtn" type="button">Test Telegram</button>
         </div>
+        {% if integration_feedback %}
+        <div class="alert {% if integration_feedback.status == 'success' %}alert-success{% else %}alert-danger{% endif %}" role="alert">
+          {{ integration_feedback.message }}
+        </div>
+        {% endif %}
 
         <form id="settingsForm" class="row g-3">
           <div class="col-md-6">
@@ -75,6 +80,87 @@
           <div class="col-12 text-end">
             <button class="btn btn-primary" type="submit">Guardar cambios</button>
           </div>
+
+          <div class="col-12 mt-4">
+            <hr>
+            <h2 class="h5 mb-1">Integración Teamleader</h2>
+            <p class="text-muted mb-0">Conecta Teamleader, define la tarea a fichar y configura jornada exacta.</p>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">TEAMLEADER_CLIENT_ID</label>
+            <input class="form-control" name="TEAMLEADER_CLIENT_ID" value="{{ settings.TEAMLEADER_CLIENT_ID }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">TEAMLEADER_CLIENT_SECRET</label>
+            <input class="form-control" type="password" name="TEAMLEADER_CLIENT_SECRET" value="{{ settings.TEAMLEADER_CLIENT_SECRET }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">TEAMLEADER_REDIRECT_URI</label>
+            <input class="form-control" name="TEAMLEADER_REDIRECT_URI" value="{{ settings.TEAMLEADER_REDIRECT_URI }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">TEAMLEADER_TASK_ID</label>
+            <input class="form-control" name="TEAMLEADER_TASK_ID" value="{{ settings.TEAMLEADER_TASK_ID }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">TEAMLEADER_AUTH_BASE_URL</label>
+            <input class="form-control" name="TEAMLEADER_AUTH_BASE_URL" value="{{ settings.TEAMLEADER_AUTH_BASE_URL }}">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">TEAMLEADER_API_BASE_URL</label>
+            <input class="form-control" name="TEAMLEADER_API_BASE_URL" value="{{ settings.TEAMLEADER_API_BASE_URL }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">TEAMLEADER_WORKDAY_START (HH:MM)</label>
+            <input class="form-control" type="time" name="TEAMLEADER_WORKDAY_START" value="{{ settings.TEAMLEADER_WORKDAY_START }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">TEAMLEADER_WORKDAY_END (HH:MM)</label>
+            <input class="form-control" type="time" name="TEAMLEADER_WORKDAY_END" value="{{ settings.TEAMLEADER_WORKDAY_END }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">TEAMLEADER_ACCOUNT_ID</label>
+            <input class="form-control" name="TEAMLEADER_ACCOUNT_ID" value="{{ settings.TEAMLEADER_ACCOUNT_ID }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">TEAMLEADER_ACCESS_TOKEN</label>
+            <input class="form-control" type="password" name="TEAMLEADER_ACCESS_TOKEN" value="{{ settings.TEAMLEADER_ACCESS_TOKEN }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">TEAMLEADER_REFRESH_TOKEN</label>
+            <input class="form-control" type="password" name="TEAMLEADER_REFRESH_TOKEN" value="{{ settings.TEAMLEADER_REFRESH_TOKEN }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">TEAMLEADER_TOKEN_EXPIRES_AT</label>
+            <input class="form-control" name="TEAMLEADER_TOKEN_EXPIRES_AT" value="{{ settings.TEAMLEADER_TOKEN_EXPIRES_AT }}" placeholder="2026-05-27T17:00:00+00:00">
+          </div>
+          <div class="col-12 d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-primary" id="teamleaderConnectBtn" type="button">Conectar Teamleader</button>
+            <button class="btn btn-outline-secondary" id="teamleaderTestBtn" type="button">Probar conexión</button>
+            <button class="btn btn-outline-danger" id="teamleaderDisconnectBtn" type="button">Desconectar</button>
+          </div>
+
+          <div class="col-12 mt-2">
+            <h3 class="h6 mb-2">Consulta de fichajes Teamleader</h3>
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Desde</label>
+            <input class="form-control" type="datetime-local" id="teamleaderFrom">
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Hasta</label>
+            <input class="form-control" type="datetime-local" id="teamleaderTo">
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-outline-dark w-100" id="teamleaderFetchBtn" type="button">Consultar</button>
+          </div>
+          <div class="col-12">
+            <div class="small text-muted" id="teamleaderEntriesSummary">Sin datos consultados.</div>
+            <pre class="bg-light border rounded p-3 mt-2 mb-0 small" id="teamleaderEntriesBox" style="max-height: 260px; overflow: auto;">[]</pre>
+          </div>
+          <div class="col-12">
+            <div class="small text-muted" id="teamleaderAnalysisSummary">Análisis pendiente.</div>
+          </div>
         </form>
       </div>
     </div>
@@ -96,6 +182,34 @@
     return payload;
   }
 
+  function applySettings(values) {
+    if (!values || typeof values !== 'object') return;
+    Object.entries(values).forEach(([key, value]) => {
+      const field = document.querySelector(`[name="${key}"]`);
+      if (!field) return;
+      if (field.type === 'checkbox') {
+        field.checked = Boolean(value);
+      } else if (value !== undefined && value !== null) {
+        field.value = value;
+      } else {
+        field.value = '';
+      }
+    });
+    document.getElementById('enableToggle').checked = Boolean(values.ENABLE);
+  }
+
+  function getIsoRange() {
+    const fromValue = document.getElementById('teamleaderFrom').value;
+    const toValue = document.getElementById('teamleaderTo').value;
+    if (!fromValue || !toValue) {
+      throw new Error('Selecciona un rango de fechas para consultar Teamleader.');
+    }
+    return {
+      from: new Date(fromValue).toISOString(),
+      to: new Date(toValue).toISOString()
+    };
+  }
+
   document.getElementById('settingsForm').addEventListener('submit', async (event) => {
     event.preventDefault();
     try {
@@ -108,6 +222,7 @@
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'No se pudo guardar la configuración.');
       }
+      applySettings(data.settings);
       window.showToast('Configuración guardada correctamente.');
     } catch (error) {
       window.showToast(error.message, true);
@@ -122,6 +237,75 @@
         throw new Error(data.error || 'No se pudo enviar el mensaje de prueba.');
       }
       window.showToast('Mensaje de prueba enviado correctamente.');
+    } catch (error) {
+      window.showToast(error.message, true);
+    }
+  });
+
+  document.getElementById('teamleaderConnectBtn').addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/integrations/teamleader/connect', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.auth_url) {
+        throw new Error(data.error || 'No se pudo iniciar la conexión de Teamleader.');
+      }
+      window.location.href = data.auth_url;
+    } catch (error) {
+      window.showToast(error.message, true);
+    }
+  });
+
+  document.getElementById('teamleaderTestBtn').addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/integrations/teamleader/test', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo probar la conexión de Teamleader.');
+      }
+      applySettings(data.settings);
+      window.showToast(data.message || 'Conexión Teamleader verificada.');
+    } catch (error) {
+      window.showToast(error.message, true);
+    }
+  });
+
+  document.getElementById('teamleaderDisconnectBtn').addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/integrations/teamleader/disconnect', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo desconectar Teamleader.');
+      }
+      applySettings(data.settings);
+      window.showToast('Integración Teamleader desconectada.');
+    } catch (error) {
+      window.showToast(error.message, true);
+    }
+  });
+
+  document.getElementById('teamleaderFetchBtn').addEventListener('click', async () => {
+    try {
+      const range = getIsoRange();
+      const entriesResponse = await fetch(`/api/integrations/teamleader/entries?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`);
+      const entriesData = await entriesResponse.json();
+      if (!entriesResponse.ok || !entriesData.success) {
+        throw new Error(entriesData.error || 'No se pudieron obtener los fichajes de Teamleader.');
+      }
+      applySettings(entriesData.settings);
+      const entries = Array.isArray(entriesData.entries) ? entriesData.entries : [];
+      document.getElementById('teamleaderEntriesSummary').textContent = `Fichajes obtenidos: ${entries.length}`;
+      document.getElementById('teamleaderEntriesBox').textContent = JSON.stringify(entries, null, 2);
+
+      const analysisResponse = await fetch(`/api/integrations/teamleader/analysis?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`);
+      const analysisData = await analysisResponse.json();
+      if (!analysisResponse.ok || !analysisData.success) {
+        throw new Error(analysisData.error || 'No se pudo calcular el análisis de Teamleader.');
+      }
+      applySettings(analysisData.settings);
+      const details = analysisData.analysis || {};
+      document.getElementById('teamleaderAnalysisSummary').textContent =
+        `Esperado: ${(details.expected_total_seconds || 0) / 3600}h · Fichado: ${(details.clocked_total_seconds || 0) / 3600}h · Balance: ${(details.balance_seconds || 0) / 3600}h`;
+      window.showToast('Fichajes y análisis de Teamleader actualizados.');
     } catch (error) {
       window.showToast(error.message, true);
     }

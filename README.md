@@ -109,11 +109,23 @@ This allows `docker pull ghcr.io/<owner>/cactushr_bot:latest` to work on both st
 | `PREFERRED_CLOCK_IN` | No | Preferred reference time used to calculate planned exit time; planned entry applies a daily ±15 minute margin around it. Default: `08:00`. |
 | `DASHBOARD_PASSWORD` | No | HTTP Basic Auth password for the dashboard. Default: `admin`. |
 | `DASHBOARD_PORT` | No | Flask dashboard port. Default: `5000`. |
+| `TEAMLEADER_CLIENT_ID` | No | Teamleader OAuth client ID. Required to connect Teamleader. |
+| `TEAMLEADER_CLIENT_SECRET` | No | Teamleader OAuth client secret. Required to connect Teamleader. |
+| `TEAMLEADER_REDIRECT_URI` | No | OAuth callback URL (must point to `/api/integrations/teamleader/callback`). |
+| `TEAMLEADER_AUTH_BASE_URL` | No | Teamleader OAuth base URL. Default: `https://app.teamleader.eu`. |
+| `TEAMLEADER_API_BASE_URL` | No | Teamleader API base URL. Default: `https://api.focus.teamleader.eu`. |
+| `TEAMLEADER_ACCESS_TOKEN` | No | Teamleader OAuth access token (managed automatically after connect). |
+| `TEAMLEADER_REFRESH_TOKEN` | No | Teamleader OAuth refresh token (managed automatically after connect). |
+| `TEAMLEADER_TOKEN_EXPIRES_AT` | No | ISO timestamp for Teamleader token expiration (managed automatically). |
+| `TEAMLEADER_ACCOUNT_ID` | No | Optional Teamleader account/organization identifier. |
+| `TEAMLEADER_TASK_ID` | No | Teamleader task ID to use as filter for fichajes/time entries. |
+| `TEAMLEADER_WORKDAY_START` | No | Exact start time (`HH:MM`) used for Teamleader hour analysis. Default: `08:00`. |
+| `TEAMLEADER_WORKDAY_END` | No | Exact end time (`HH:MM`) used for Teamleader hour analysis. Default: `17:00`. |
 
 ## Dashboard features
 
 - **Dashboard**: live view of the next action, countdown, today's clock-in/clock-out state, the preferred clock-in reference, and the planned schedule.
-- **Settings**: update environment-backed configuration, preserve masked secrets, and test Telegram delivery.
+- **Settings**: update environment-backed configuration, preserve masked secrets, test Telegram delivery, and manage Teamleader integration (OAuth connect, task selection, exact-hour analysis).
 - **Calendar**: maintain holidays and reduced-workdays with a clickable month grid plus JSON import/export.
 - **Logs**: inspect the latest scheduler logs and current fichaje state with auto-refresh.
 - **PWA installable app**: install the dashboard on iPhone/Android home screen with offline shell and dedicated standalone mode.
@@ -161,6 +173,12 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
 | `GET` | `/api/settings` | Returns the current configuration with secret fields masked. |
 | `POST` | `/api/settings` | Saves configuration values to `.env` and reloads them. |
 | `POST` | `/api/test-telegram` | Sends a Telegram test message. |
+| `POST` | `/api/integrations/teamleader/connect` | Starts Teamleader OAuth flow and returns authorization URL. |
+| `GET` | `/api/integrations/teamleader/callback` | OAuth callback endpoint that stores Teamleader tokens. |
+| `POST` | `/api/integrations/teamleader/test` | Validates Teamleader connection (`users.me`) and refreshes token if needed. |
+| `POST` | `/api/integrations/teamleader/disconnect` | Clears Teamleader token/session fields from `.env`. |
+| `GET` | `/api/integrations/teamleader/entries` | Lists Teamleader fichajes/time entries for a date range. |
+| `GET` | `/api/integrations/teamleader/analysis` | Returns expected vs clocked hours analysis for a date range. |
 | `GET` | `/api/festivos` | Returns the configured holidays. |
 | `POST` | `/api/festivos` | Replaces the configured holidays list. |
 | `GET` | `/api/jornada_reducida` | Returns reduced-workday dates. |
@@ -169,6 +187,15 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
 | `GET` | `/api/logs` | Returns the last 100 lines of `logs/general.log`. |
 
 ## Development setup
+
+## Teamleader setup notes
+
+1. Register an OAuth app in Teamleader.
+2. Configure `TEAMLEADER_CLIENT_ID`, `TEAMLEADER_CLIENT_SECRET` and `TEAMLEADER_REDIRECT_URI`.
+3. Set redirect URI to this dashboard callback:
+   - `https://<your-host>/api/integrations/teamleader/callback`
+4. In Settings, define `TEAMLEADER_TASK_ID` and exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`).
+5. Use **Conectar Teamleader** in Settings to complete OAuth and persist tokens.
 
 1. Install Python 3.11+.
 2. Install dependencies:
