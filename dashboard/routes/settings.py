@@ -309,6 +309,8 @@ def _extract_duration_seconds(entry: dict[str, object]) -> int:
                 return int(normalized_value * 60)
             if raw_unit in {'second', 'seconds', 'sec', 's'}:
                 return int(normalized_value)
+            if raw_unit:
+                return 0
             return int(normalized_value)
     if isinstance(duration, (int, float)):
         return int(max(0, duration))
