@@ -63,12 +63,56 @@
         </div>
       </div>
     </div>
+    <div class="card shadow-sm border-0 mt-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
+          <div>
+            <h2 class="h4 mb-1">Teamleader</h2>
+            <p class="text-muted mb-0">Resumen de horas y registro del día actual.</p>
+          </div>
+          <span class="badge rounded-pill text-bg-secondary" id="teamleaderStatusBadge">Cargando...</span>
+        </div>
+        <div class="row g-3">
+          <div class="col-lg-4 col-md-6">
+            <div class="status-box">
+              <div class="text-muted small">📝 Registro de hoy</div>
+              <div class="fs-5 fw-semibold" id="teamleaderTodayStatus">-</div>
+              <div class="small text-muted mt-1" id="teamleaderTodayEntries">-</div>
+            </div>
+          </div>
+          <div class="col-lg-4 col-md-6">
+            <div class="status-box">
+              <div class="text-muted small">⏱️ Horas de hoy</div>
+              <div class="fs-5 fw-semibold" id="teamleaderTodayHours">-</div>
+            </div>
+          </div>
+          <div class="col-lg-4 col-md-12">
+            <div class="status-box h-100">
+              <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                <div>
+                  <div class="text-muted small">📊 Total del periodo</div>
+                  <div class="fs-5 fw-semibold" id="teamleaderPeriodTotal">-</div>
+                  <div class="small text-muted mt-1" id="teamleaderPeriodRange">-</div>
+                </div>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Filtro Teamleader">
+                  <button class="btn btn-outline-primary active" type="button" data-teamleader-period="daily">Día</button>
+                  <button class="btn btn-outline-primary" type="button" data-teamleader-period="weekly">Semana</button>
+                  <button class="btn btn-outline-primary" type="button" data-teamleader-period="monthly">Mes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+  let teamleaderPeriod = 'daily';
+
   function formatNextAction(data) {
     const action = data.next_action || '-';
     const actionAt = data.next_action_at || '';
@@ -82,6 +126,46 @@
 
   function getPlannedTimeLabel(timestamp) {
     return timestamp || 'No laborable';
+  }
+
+  function formatDuration(seconds) {
+    const safeSeconds = Math.max(Number(seconds) || 0, 0);
+    const hours = Math.floor(safeSeconds / 3600);
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}h`;
+  }
+
+  function setTeamleaderUnavailable(message) {
+    document.getElementById('teamleaderStatusBadge').textContent = message || 'No disponible';
+    document.getElementById('teamleaderTodayStatus').textContent = '-';
+    document.getElementById('teamleaderTodayEntries').textContent = '-';
+    document.getElementById('teamleaderTodayHours').textContent = '-';
+    document.getElementById('teamleaderPeriodTotal').textContent = '-';
+    document.getElementById('teamleaderPeriodRange').textContent = '-';
+  }
+
+  async function refreshTeamleaderSummary(showErrorToast = false) {
+    try {
+      const response = await fetch(`/api/integrations/teamleader/dashboard-summary?period=${encodeURIComponent(teamleaderPeriod)}`);
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'No se pudo actualizar Teamleader.');
+      }
+      const summary = data.summary || {};
+      const hasTodayEntry = Boolean(summary.has_today_entry);
+      document.getElementById('teamleaderStatusBadge').textContent = hasTodayEntry ? 'Con registro hoy' : 'Sin registro hoy';
+      document.getElementById('teamleaderTodayStatus').textContent = hasTodayEntry ? 'Sí' : 'No';
+      document.getElementById('teamleaderTodayEntries').textContent = `Entradas de hoy: ${summary.today_entries_count || 0}`;
+      document.getElementById('teamleaderTodayHours').textContent = formatDuration(summary.today_total_seconds);
+      document.getElementById('teamleaderPeriodTotal').textContent = formatDuration(summary.total_seconds);
+      document.getElementById('teamleaderPeriodRange').textContent =
+        `${summary.period_label || '-'} · ${summary.from || '-'} → ${summary.to || '-'}`;
+    } catch (error) {
+      setTeamleaderUnavailable('No disponible');
+      if (showErrorToast) {
+        window.showToast(error.message, true);
+      }
+    }
   }
 
   async function loadPreferredClockIn() {
@@ -141,8 +225,20 @@
     }
   });
 
+  document.querySelectorAll('[data-teamleader-period]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      teamleaderPeriod = button.dataset.teamleaderPeriod || 'daily';
+      document.querySelectorAll('[data-teamleader-period]').forEach((item) => {
+        item.classList.toggle('active', item === button);
+      });
+      await refreshTeamleaderSummary(true);
+    });
+  });
+
   loadPreferredClockIn().catch(() => window.showToast('No se pudo cargar la hora deseada. Por favor, recarga la página.', true));
   refreshStatus();
+  refreshTeamleaderSummary();
   setInterval(refreshStatus, 30000);
+  setInterval(refreshTeamleaderSummary, 300000);
 </script>
 {% endblock %}

@@ -304,9 +304,37 @@ def _extract_duration_seconds(entry: dict[str, object]) -> int:
     return 0
 
 
+def _sum_entry_durations(entries: list[dict[str, object]]) -> int:
+    return sum(_extract_duration_seconds(entry) for entry in entries)
+
+
 def _parse_hhmm(raw_value: str) -> time:
     parsed = time.fromisoformat(raw_value.strip())
     return parsed.replace(second=0, microsecond=0)
+
+
+def _get_teamleader_entries(from_date: date, to_date: date) -> list[dict[str, object]]:
+    entries, refresh_updates = teamleader.list_time_entries(from_date.isoformat(), to_date.isoformat())
+    if refresh_updates:
+        _persist_settings_updates(refresh_updates)
+    return entries
+
+
+def _resolve_teamleader_period(period: str, today: date) -> tuple[str, date, date]:
+    normalized = period.strip().lower()
+    if normalized == 'daily':
+        return 'Hoy', today, today
+    if normalized == 'weekly':
+        from_date = today - timedelta(days=today.weekday())
+        return 'Esta semana', from_date, from_date + timedelta(days=6)
+    if normalized == 'monthly':
+        from_date = today.replace(day=1)
+        if today.month == 12:
+            next_month = date(today.year + 1, 1, 1)
+        else:
+            next_month = date(today.year, today.month + 1, 1)
+        return 'Este mes', from_date, next_month - timedelta(days=1)
+    raise ValueError('invalid-period')
 
 
 @settings_bp.get('/api/integrations/teamleader/analysis')
@@ -390,6 +418,54 @@ def teamleader_analysis():
     except Exception:
         logger.exception('No se pudo calcular el análisis de horas de Teamleader.')
         return jsonify({'success': False, 'error': 'No se pudo calcular el análisis de horas de Teamleader.'}), 500
+
+
+@settings_bp.get('/api/integrations/teamleader/dashboard-summary')
+@auth.login_required
+def teamleader_dashboard_summary():
+    disabled_response = _teamleader_disabled_response()
+    if disabled_response:
+        return disabled_response
+
+    today = datetime.now(config.TZ).date()
+    period = (request.args.get('period') or 'daily').strip().lower()
+
+    try:
+        period_label, from_date, to_date = _resolve_teamleader_period(period, today)
+    except ValueError:
+        return jsonify({'success': False, 'error': 'El periodo debe ser daily, weekly o monthly.'}), 400
+
+    try:
+        period_entries = _get_teamleader_entries(from_date, to_date)
+        today_entries = period_entries if from_date == today and to_date == today else _get_teamleader_entries(today, today)
+        return jsonify(
+            {
+                'success': True,
+                'summary': {
+                    'period': period,
+                    'period_label': period_label,
+                    'from': from_date.isoformat(),
+                    'to': to_date.isoformat(),
+                    'entries_count': len(period_entries),
+                    'total_seconds': _sum_entry_durations(period_entries),
+                    'has_today_entry': len(today_entries) > 0,
+                    'today_entries_count': len(today_entries),
+                    'today_total_seconds': _sum_entry_durations(today_entries),
+                },
+                'settings': _get_form_settings(),
+            }
+        )
+    except teamleader.TeamleaderError as exc:
+        logger.warning('Error al obtener resumen de Teamleader para dashboard: %s', exc)
+        return jsonify(
+            {
+                'success': False,
+                'error': teamleader.get_last_error_message('No se pudo obtener el resumen de Teamleader.'),
+            }
+        ), 400
+    except Exception:
+        logger.exception('No se pudo obtener el resumen de Teamleader para dashboard.')
+        return jsonify({'success': False, 'error': 'No se pudo obtener el resumen de Teamleader.'}), 500
 
 
 @settings_bp.post('/api/test-telegram')
