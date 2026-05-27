@@ -182,6 +182,7 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
 | `POST` | `/api/integrations/teamleader/disconnect` | Clears Teamleader token/session fields from `.env`. |
 | `GET` | `/api/integrations/teamleader/entries` | Lists Teamleader fichajes/time entries for a date range. |
 | `GET` | `/api/integrations/teamleader/analysis` | Returns expected vs clocked hours analysis for a date range. |
+| `GET` | `/api/integrations/teamleader/dashboard-summary` | Returns Teamleader totals for the current day/week/month and whether today already has records. |
 | `GET` | `/api/festivos` | Returns the configured holidays. |
 | `POST` | `/api/festivos` | Replaces the configured holidays list. |
 | `GET` | `/api/jornada_reducida` | Returns reduced-workday dates. |
