@@ -124,7 +124,7 @@ def save_settings():
             continue
         if key == 'TEAMLEADER_TASK_TYPE':
             normalized_type = '' if value is None else str(value).strip()
-            current[key] = normalized_type or 'nextgenTask'
+            current[key] = normalized_type or str(config.TEAMLEADER_TASK_TYPE or 'nextgenTask')
             continue
         if isinstance(value, bool):
             current[key] = 'true' if value else 'false'
