@@ -10,7 +10,6 @@ import config
 
 _ALLOWED_TEMPO_HOSTNAMES = {
     'api.tempo.io',
-    'tempo.io',
 }
 
 
@@ -24,8 +23,8 @@ def _normalize_base_url(url: str | None, fallback: str) -> str:
     if parsed.scheme != 'https':
         raise JiraError('La URL base de Tempo debe usar el esquema https.')
     host = parsed.netloc.split(':')[0].lower()
-    if host not in _ALLOWED_TEMPO_HOSTNAMES and not host.endswith('.tempo.io'):
-        raise JiraError('La URL base de Tempo debe ser un dominio oficial de Tempo (tempo.io).')
+    if host not in _ALLOWED_TEMPO_HOSTNAMES:
+        raise JiraError('La URL base de Tempo debe ser el dominio oficial de Tempo (api.tempo.io).')
     return value
 
 

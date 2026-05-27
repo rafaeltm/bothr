@@ -254,14 +254,12 @@ def load_jornada_reducida() -> set[str]:
         return set(_jornada_reducida_cache)
 
 
-
 def load_vacaciones() -> set[str]:
     global _vacaciones_cache
     with _calendar_cache_lock:
         if _vacaciones_cache is None:
             _vacaciones_cache = _load_json_dates(VACACIONES_FILE, 'dias')
         return set(_vacaciones_cache)
-
 
 
 def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dict[str, Any]:

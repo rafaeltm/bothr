@@ -65,6 +65,10 @@ function cycleDateState(dateString, renderAfterUpdate = true) {
     festivos.delete(dateString);
     jornadaReducida.delete(dateString);
     vacaciones.add(dateString);
+  } else if (state === 'vacaciones') {
+    festivos.delete(dateString);
+    jornadaReducida.delete(dateString);
+    vacaciones.delete(dateString);
   } else {
     festivos.delete(dateString);
     jornadaReducida.delete(dateString);
@@ -219,7 +223,7 @@ function importCalendarData(file) {
       const data = JSON.parse(reader.result);
       festivos = new Set(sanitizeWorkdays(data.festivos));
       jornadaReducida = new Set(sanitizeWorkdays(data.dias));
-      vacaciones = new Set(sanitizeWorkdays(data.vacaciones));
+      vacaciones = new Set(sanitizeWorkdays(data.vacaciones || []));
       renderCalendar();
       window.showToast('Calendario importado correctamente.');
     } catch (error) {
