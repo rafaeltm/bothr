@@ -6,7 +6,7 @@ from datetime import datetime, time, timedelta
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 
 import config
-from bot import teamleader, telegram
+from bot import schedule, teamleader, telegram
 from dashboard.auth import auth
 
 settings_bp = Blueprint('settings', __name__)
@@ -336,7 +336,13 @@ def teamleader_analysis():
         working_days = sum(
             1
             for day_offset in range((to_date.date() - from_date.date()).days + 1)
-            if (from_date.date() + timedelta(days=day_offset)).weekday() < 5
+            if schedule.is_working_day(
+                datetime.combine(
+                    from_date.date() + timedelta(days=day_offset),
+                    time.min,
+                    tzinfo=config.TZ,
+                )
+            )
         )
         expected_total_seconds = max(0, working_days * expected_daily_seconds)
         return jsonify(

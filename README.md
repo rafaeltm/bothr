@@ -193,7 +193,7 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
 2. Configure `TEAMLEADER_CLIENT_ID`, `TEAMLEADER_CLIENT_SECRET` and `TEAMLEADER_REDIRECT_URI`.
 3. Set redirect URI to this dashboard callback:
    - `https://<your-host>/api/integrations/teamleader/callback`
-4. In Settings, define `TEAMLEADER_TASK_ID` and exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`).
+4. In Settings, define `TEAMLEADER_TASK_ID` and exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`); Teamleader analysis uses the same working calendar as the scheduler (weekends/holidays excluded).
 5. Use **Conectar Teamleader** in Settings to complete OAuth and persist tokens.
 
 ## Development setup
