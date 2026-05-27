@@ -275,7 +275,7 @@ def _to_datetime_str(date_str: str, end_of_day: bool = False) -> str:
 
 def list_time_entries(started_after: str, started_before: str) -> tuple[list[dict[str, Any]], dict[str, str]]:
     page_size = config.TEAMLEADER_PAGE_SIZE
-    task_type = str(getattr(config, 'TEAMLEADER_TASK_TYPE', 'nextgenTask') or 'nextgenTask').strip()
+    task_type = str(config.TEAMLEADER_TASK_TYPE).strip()
     filters: dict[str, Any] = {
         'started_after': _to_datetime_str(started_after, end_of_day=False),
         'started_before': _to_datetime_str(started_before, end_of_day=True),
