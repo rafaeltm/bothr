@@ -242,7 +242,10 @@ def list_time_entries(started_after: str, started_before: str) -> tuple[list[dic
         'started_before': _to_datetime_str(started_before, end_of_day=True),
     }
     if config.TEAMLEADER_TASK_ID:
-        filters['task_id'] = config.TEAMLEADER_TASK_ID
+        filters['subject'] = {
+            'type': 'nextgenTask',
+            'id': config.TEAMLEADER_TASK_ID,
+        }
     payload = {
         'filter': filters,
         'sort': [
