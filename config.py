@@ -48,6 +48,7 @@ MANAGED_ENV_KEYS = [
     "TEAMLEADER_PAGE_SIZE",
     "TEAMLEADER_WORKDAY_START",
     "TEAMLEADER_WORKDAY_END",
+    "TEAMLEADER_AUTO_ENTRY",
 ]
 SENSITIVE_ENV_KEYS = {
     "PASSWORD",
@@ -89,6 +90,7 @@ TEAMLEADER_TASK_TYPE: str = "nextgenTask"
 TEAMLEADER_PAGE_SIZE: int = 100
 TEAMLEADER_WORKDAY_START: str = "08:00"
 TEAMLEADER_WORKDAY_END: str = "17:00"
+TEAMLEADER_AUTO_ENTRY: bool = False
 _file_locks_mutex = threading.Lock()
 _file_locks: dict[Path, threading.RLock] = {}
 _calendar_cache_lock = threading.Lock()
@@ -195,6 +197,7 @@ def refresh(force_file_override: bool = False) -> None:
             "TEAMLEADER_PAGE_SIZE": _get_bounded_int("TEAMLEADER_PAGE_SIZE", 100, 1, 100),
             "TEAMLEADER_WORKDAY_START": os.getenv("TEAMLEADER_WORKDAY_START") or "08:00",
             "TEAMLEADER_WORKDAY_END": os.getenv("TEAMLEADER_WORKDAY_END") or "17:00",
+            "TEAMLEADER_AUTO_ENTRY": _get_bool("TEAMLEADER_AUTO_ENTRY", default=False),
         }
     )
     invalidate_calendar_cache()
@@ -274,12 +277,50 @@ def get_current_settings(mask_sensitive: bool = False, mask: str = '***') -> dic
         'TEAMLEADER_PAGE_SIZE': str(TEAMLEADER_PAGE_SIZE),
         'TEAMLEADER_WORKDAY_START': TEAMLEADER_WORKDAY_START or '',
         'TEAMLEADER_WORKDAY_END': TEAMLEADER_WORKDAY_END or '',
+        'TEAMLEADER_AUTO_ENTRY': TEAMLEADER_AUTO_ENTRY,
     }
     if mask_sensitive:
         for key in SENSITIVE_ENV_KEYS:
             if values.get(key):
                 values[key] = mask
     return values
+
+
+def _stringify_value(value: object) -> str:
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    return '' if value is None else str(value)
+
+
+def _format_env_value(value: str) -> str:
+    if value == '':
+        return ''
+    needs_quotes = any(char.isspace() for char in value) or '#' in value or '"' in value
+    escaped = value.replace('\\', '\\\\').replace('"', '\\"')
+    if needs_quotes:
+        return f'"{escaped}"'
+    return escaped
+
+
+def persist_token_updates(updates: dict[str, object]) -> None:
+    """Persist Teamleader token refresh values to the .env file and reload config.
+
+    Only keys present in MANAGED_ENV_KEYS are written. This is intentionally
+    lightweight — it does not call telegram.refresh_bot() as it is safe to call
+    from non-dashboard contexts (e.g. the scheduler).
+    """
+    current = {
+        key: _stringify_value(get_current_settings(mask_sensitive=False).get(key, ''))
+        for key in MANAGED_ENV_KEYS
+    }
+    for key, value in updates.items():
+        if key not in current:
+            continue
+        current[key] = _stringify_value(value).strip()
+    lines = [f'{key}={_format_env_value(current.get(key, ""))}' for key in MANAGED_ENV_KEYS]
+    ENV_FILE.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    ENV_FILE.chmod(0o600)
+    refresh(force_file_override=True)
 
 
 
