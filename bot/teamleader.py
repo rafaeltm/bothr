@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import secrets
 import threading
@@ -12,6 +13,7 @@ from urllib.request import Request, urlopen
 
 import config
 
+logger = logging.getLogger('bothr')
 _STATE_TTL = timedelta(minutes=10)
 _MAX_PUBLIC_ERROR_LENGTH = 300
 _oauth_states_lock = threading.Lock()
@@ -269,7 +271,13 @@ def _to_datetime_str(date_str: str, end_of_day: bool = False) -> str:
     """
     normalized = date_str.strip()
     if 'T' in normalized or ' ' in normalized:
-        return normalized
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return normalized
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=config.TZ)
+        return parsed.isoformat()
     try:
         local_date = datetime.fromisoformat(normalized).date()
     except ValueError as exc:

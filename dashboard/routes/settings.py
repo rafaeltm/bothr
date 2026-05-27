@@ -310,6 +310,7 @@ def _extract_duration_seconds(entry: dict[str, object]) -> int:
             if raw_unit in {'second', 'seconds', 'sec', 's'}:
                 return int(normalized_value)
             if raw_unit:
+                logger.warning('Unidad de duración Teamleader no reconocida: %s', raw_unit)
                 return 0
             return int(normalized_value)
     if isinstance(duration, (int, float)):
