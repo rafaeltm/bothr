@@ -28,6 +28,10 @@ def _get_work_hours(reference: datetime) -> int:
     return STANDARD_WORK_HOURS
 
 
+def get_work_hours(reference: datetime) -> int:
+    return _get_work_hours(reference)
+
+
 def _get_daily_clock_in_time(reference: datetime) -> time:
     preferred_clock_in = datetime.combine(reference.date(), config.PREFERRED_CLOCK_IN, tzinfo=config.TZ)
     seeded_random = random.Random(reference.date().isoformat())

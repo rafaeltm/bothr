@@ -339,6 +339,34 @@ def _resolve_teamleader_period(period: str, today: date) -> tuple[str, date, dat
     raise ValueError('invalid-period')
 
 
+def _resolve_next_teamleader_preview(today: date, has_today_entry: bool) -> dict[str, object]:
+    try:
+        workday_start = _parse_hhmm(config.TEAMLEADER_WORKDAY_START)
+    except (TypeError, ValueError):
+        workday_start = time(hour=8, minute=0)
+
+    if has_today_entry:
+        target_date = today + timedelta(days=1)
+    else:
+        target_date = today
+
+    for _ in range(schedule.MAX_WORKDAY_LOOKAHEAD_DAYS):
+        target_reference = datetime.combine(target_date, time.min, tzinfo=config.TZ)
+        if schedule.is_working_day(target_reference):
+            work_hours = schedule.get_work_hours(target_reference)
+            duration_seconds = int(work_hours * 3600)
+            started_at = datetime.combine(target_date, workday_start, tzinfo=config.TZ)
+            return {
+                'date': target_date.isoformat(),
+                'hours': work_hours,
+                'duration_seconds': duration_seconds,
+                'started_at': started_at.isoformat(),
+            }
+        target_date += timedelta(days=1)
+
+    return {}
+
+
 @settings_bp.get('/api/integrations/teamleader/analysis')
 @auth.login_required
 def teamleader_analysis():
@@ -440,6 +468,7 @@ def teamleader_dashboard_summary():
     try:
         period_entries = _get_teamleader_entries(from_date, to_date)
         today_entries = period_entries if from_date == today and to_date == today else _get_teamleader_entries(today, today)
+        has_today_entry = len(today_entries) > 0
         return jsonify(
             {
                 'success': True,
@@ -450,9 +479,10 @@ def teamleader_dashboard_summary():
                     'to': to_date.isoformat(),
                     'entries_count': len(period_entries),
                     'total_seconds': _sum_entry_durations(period_entries),
-                    'has_today_entry': len(today_entries) > 0,
+                    'has_today_entry': has_today_entry,
                     'today_entries_count': len(today_entries),
                     'today_total_seconds': _sum_entry_durations(today_entries),
+                    'next_entry_preview': _resolve_next_teamleader_preview(today, has_today_entry),
                 },
                 'settings': _get_form_settings(),
             }
