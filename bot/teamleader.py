@@ -299,7 +299,7 @@ def _extract_entry_user_id(entry: dict[str, Any]) -> str:
     return ''
 
 
-def _extract_entry_subject(entry: dict[str, Any]) -> tuple[str | None, str | None]:
+def extract_entry_subject(entry: dict[str, Any]) -> tuple[str | None, str | None]:
     subject_ref = entry.get('subject')
     if not isinstance(subject_ref, dict):
         return None, None
@@ -312,10 +312,6 @@ def _extract_entry_subject(entry: dict[str, Any]) -> tuple[str | None, str | Non
     if not normalized_subject_id:
         return None, None
     return normalized_subject_id, (normalized_subject_type or None)
-
-
-def get_entry_subject(entry: dict[str, Any]) -> tuple[str | None, str | None]:
-    return _extract_entry_subject(entry)
 
 
 def add_time_entry(

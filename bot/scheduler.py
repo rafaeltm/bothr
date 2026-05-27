@@ -150,8 +150,9 @@ async def _auto_teamleader_entry() -> None:
         started_at = datetime.combine(now.date(), workday_start, tzinfo=config.TZ)
         subject_id = (config.TEAMLEADER_TASK_ID or '').strip() or None
         subject_type = (config.TEAMLEADER_TASK_TYPE or 'nextgenTask').strip()
+        # Use the most recent entry from yesterday to preserve the same task.
         for entry in reversed(yesterday_entries):
-            previous_subject_id, previous_subject_type = teamleader.get_entry_subject(entry)
+            previous_subject_id, previous_subject_type = teamleader.extract_entry_subject(entry)
             if not previous_subject_id:
                 continue
             subject_id = previous_subject_id
