@@ -12,12 +12,42 @@ from urllib.request import Request, urlopen
 import config
 
 _STATE_TTL = timedelta(minutes=10)
+_MAX_PUBLIC_ERROR_LENGTH = 300
 _oauth_states_lock = threading.Lock()
 _oauth_states: dict[str, datetime] = {}
+_last_error_lock = threading.Lock()
+_last_error_message: str | None = None
 
 
 class TeamleaderError(RuntimeError):
     """Raised when Teamleader integration operations fail."""
+
+
+def _sanitize_public_error(message: str, fallback: str) -> str:
+    normalized = (message or '').strip()
+    if not normalized:
+        return fallback
+    first_line = normalized.splitlines()[0].strip()
+    if not first_line:
+        return fallback
+    lowered = first_line.lower()
+    if 'traceback' in lowered or 'file "' in lowered or lowered.startswith('line '):
+        return fallback
+    return first_line[:_MAX_PUBLIC_ERROR_LENGTH]
+
+
+def _set_last_error_message(message: str, fallback: str) -> None:
+    global _last_error_message
+    safe_message = _sanitize_public_error(message, fallback)
+    with _last_error_lock:
+        _last_error_message = safe_message
+
+
+def get_last_error_message(fallback: str) -> str:
+    with _last_error_lock:
+        if _last_error_message:
+            return _last_error_message
+    return fallback
 
 
 def _utc_now() -> datetime:
@@ -83,9 +113,12 @@ def _http_post(url: str, body: dict[str, Any], headers: dict[str, str] | None = 
     except HTTPError as exc:
         response_payload = _parse_json_response(exc.read())
         message = _extract_error(response_payload, f'Error HTTP {exc.code} al contactar Teamleader.')
+        _set_last_error_message(message, 'No se pudo completar la operación en Teamleader.')
         raise TeamleaderError(message) from exc
     except URLError as exc:
-        raise TeamleaderError('No se pudo conectar con Teamleader.') from exc
+        message = 'No se pudo conectar con Teamleader.'
+        _set_last_error_message(message, message)
+        raise TeamleaderError(message) from exc
 
 
 def _cleanup_expired_states() -> None:
