@@ -586,6 +586,83 @@ def teamleader_add_entry():
         return jsonify({'success': False, 'error': 'No se pudo añadir el registro en Teamleader.'}), 500
 
 
+@settings_bp.get('/api/integrations/teamleader/available-tasks')
+@auth.login_required
+def teamleader_available_tasks():
+    disabled_response = _teamleader_disabled_response()
+    if disabled_response:
+        return disabled_response
+    try:
+        tasks, refresh_updates = teamleader.list_tasks()
+        if refresh_updates:
+            _persist_settings_updates(refresh_updates)
+        task_list = [
+            {
+                'id': str(t.get('id') or '').strip(),
+                'title': str(t.get('title') or t.get('summary') or t.get('name') or '').strip(),
+                'type': 'nextgenTask',
+            }
+            for t in tasks
+            if str(t.get('id') or '').strip()
+        ]
+        return jsonify({'success': True, 'tasks': task_list})
+    except teamleader.TeamleaderError as exc:
+        logger.warning('Error al obtener tareas de Teamleader: %s', exc)
+        return jsonify(
+            {
+                'success': False,
+                'error': teamleader.get_last_error_message('No se pudieron obtener las tareas de Teamleader.'),
+            }
+        ), 400
+    except Exception:
+        logger.exception('No se pudieron obtener las tareas de Teamleader.')
+        return jsonify({'success': False, 'error': 'No se pudieron obtener las tareas de Teamleader.'}), 500
+
+
+@settings_bp.get('/api/integrations/teamleader/task-schedules')
+@auth.login_required
+def get_task_schedules():
+    return jsonify({'success': True, 'schedules': config.read_task_schedules()})
+
+
+@settings_bp.post('/api/integrations/teamleader/task-schedules')
+@auth.login_required
+def save_task_schedules():
+    body = request.get_json(silent=True)
+    if not isinstance(body, list):
+        return jsonify({'success': False, 'error': 'Se esperaba un array JSON de registros de tareas.'}), 400
+
+    validated: list[dict] = []
+    for idx, item in enumerate(body):
+        if not isinstance(item, dict):
+            return jsonify({'success': False, 'error': f'El elemento en posición {idx} no es un objeto válido.'}), 400
+        task_id = str(item.get('task_id') or '').strip()
+        if not task_id:
+            return jsonify({'success': False, 'error': f'El elemento en posición {idx} no tiene task_id.'}), 400
+        start_time = str(item.get('start_time') or '').strip()
+        end_time = str(item.get('end_time') or '').strip()
+        if start_time:
+            normalized_start = _normalize_time_value(start_time)
+            if normalized_start is None:
+                return jsonify({'success': False, 'error': f'start_time en posición {idx} debe tener formato HH:MM.'}), 400
+            start_time = normalized_start
+        if end_time:
+            normalized_end = _normalize_time_value(end_time)
+            if normalized_end is None:
+                return jsonify({'success': False, 'error': f'end_time en posición {idx} debe tener formato HH:MM.'}), 400
+            end_time = normalized_end
+        validated.append({
+            'task_id': task_id,
+            'task_name': str(item.get('task_name') or '').strip(),
+            'task_type': str(item.get('task_type') or 'nextgenTask').strip(),
+            'start_time': start_time,
+            'end_time': end_time,
+        })
+
+    config.write_task_schedules(validated)
+    return jsonify({'success': True, 'schedules': validated})
+
+
 @settings_bp.post('/api/test-telegram')
 @auth.login_required
 def test_telegram():

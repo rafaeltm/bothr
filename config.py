@@ -91,6 +91,7 @@ TEAMLEADER_TASK_TYPE: str = "nextgenTask"
 TEAMLEADER_PAGE_SIZE: int = 100
 TEAMLEADER_WORKDAY_START: str = "08:00"
 TEAMLEADER_WORKDAY_END: str = "17:00"
+TEAMLEADER_TASK_SCHEDULES_FILE: Path = DATA_DIR / "teamleader_task_schedules.json"
 TEAMLEADER_AUTO_ENTRY: bool = False
 _file_locks_mutex = threading.Lock()
 _file_locks: dict[Path, threading.RLock] = {}
@@ -365,6 +366,36 @@ def persist_token_updates(updates: dict[str, object]) -> None:
     write_managed_env(current)
     refresh(force_file_override=True)
 
+
+def read_task_schedules() -> list[dict[str, Any]]:
+    """Read the Teamleader task schedule list from the data file.
+
+    Each entry is a dict with keys: task_id, task_name, task_type, start_time, end_time.
+    Returns an empty list when the file is missing or invalid.
+    """
+    data = read_json_file(TEAMLEADER_TASK_SCHEDULES_FILE, [])
+    if not isinstance(data, list):
+        return []
+    valid = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        task_id = str(item.get('task_id') or '').strip()
+        if not task_id:
+            continue
+        valid.append({
+            'task_id': task_id,
+            'task_name': str(item.get('task_name') or '').strip(),
+            'task_type': str(item.get('task_type') or 'nextgenTask').strip(),
+            'start_time': str(item.get('start_time') or '').strip(),
+            'end_time': str(item.get('end_time') or '').strip(),
+        })
+    return valid
+
+
+def write_task_schedules(schedules: list[dict[str, Any]]) -> None:
+    """Persist the Teamleader task schedule list to the data file."""
+    write_json_file(TEAMLEADER_TASK_SCHEDULES_FILE, schedules)
 
 
 def ensure_parent(path: Path) -> None:

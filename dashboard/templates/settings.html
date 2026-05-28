@@ -214,6 +214,61 @@
           <div class="col-12">
             <div class="small text-muted" id="teamleaderAnalysisSummary">Análisis pendiente.</div>
           </div>
+
+          <!-- Task schedules section -->
+          <div class="col-12 mt-3">
+            <hr>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <div>
+                <h3 class="h6 mb-1">Tareas programadas</h3>
+                <p class="text-muted small mb-0">Define las tareas de Teamleader que se van a registrar cada día, con su hora de inicio y fin.</p>
+              </div>
+              <button class="btn btn-sm btn-outline-secondary ms-auto" id="loadTlTasksBtn" type="button">
+                <span id="loadTlTasksSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+                Cargar tareas de Teamleader
+              </button>
+            </div>
+
+            <!-- Add task form -->
+            <div class="card border mb-3">
+              <div class="card-body p-3">
+                <p class="small fw-semibold mb-2">Añadir tarea</p>
+                <div class="row g-2 align-items-end">
+                  <div class="col-12 col-md-5">
+                    <label class="form-label small mb-1" for="tlTaskSelect">Tarea</label>
+                    <select class="form-select form-select-sm" id="tlTaskSelect">
+                      <option value="">— Selecciona una tarea —</option>
+                    </select>
+                    <div class="mt-1 d-flex gap-1">
+                      <input class="form-control form-control-sm" id="tlTaskIdManual" placeholder="ID manual (si no está en la lista)" style="font-size:0.75rem">
+                      <input class="form-control form-control-sm" id="tlTaskNameManual" placeholder="Nombre (opcional)" style="font-size:0.75rem">
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-3">
+                    <label class="form-label small mb-1" for="tlTaskStart">Hora inicio</label>
+                    <input class="form-control form-control-sm" type="time" id="tlTaskStart">
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <label class="form-label small mb-1" for="tlTaskEnd">Hora fin</label>
+                    <input class="form-control form-control-sm" type="time" id="tlTaskEnd">
+                  </div>
+                  <div class="col-12 col-md-2">
+                    <button class="btn btn-sm btn-primary w-100" id="addTlTaskBtn" type="button">Añadir</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Configured task list -->
+            <div id="tlTaskSchedulesList">
+              <p class="text-muted small" id="tlTaskSchedulesEmpty">No hay tareas configuradas.</p>
+            </div>
+
+            <div class="d-flex gap-2 mt-2">
+              <button class="btn btn-sm btn-success" id="saveTlTaskSchedulesBtn" type="button">Guardar lista de tareas</button>
+            </div>
+          </div>
+
         </form>
       </div>
     </div>
@@ -230,7 +285,10 @@
     'teamleaderDisconnectBtn',
     'teamleaderFetchBtn',
     'teamleaderFrom',
-    'teamleaderTo'
+    'teamleaderTo',
+    'loadTlTasksBtn',
+    'addTlTaskBtn',
+    'saveTlTaskSchedulesBtn',
   ];
 
   function isTeamleaderEnabled() {
@@ -406,5 +464,160 @@
   document.getElementById('teamleaderEnabledToggle').addEventListener('change', syncTeamleaderControls);
 
   syncTeamleaderControls();
+
+  // ── Task Schedules ──────────────────────────────────────────────────────────
+
+  let _tlAvailableTasks = [];   // [{id, title, type}]
+  let _tlSchedules = [];        // [{task_id, task_name, task_type, start_time, end_time}]
+
+  async function loadTlSchedules() {
+    try {
+      const res = await fetch('/api/integrations/teamleader/task-schedules');
+      const data = await res.json();
+      if (data.success) {
+        _tlSchedules = Array.isArray(data.schedules) ? data.schedules : [];
+        renderTlSchedules();
+      }
+    } catch (_) {}
+  }
+
+  function renderTlSchedules() {
+    const container = document.getElementById('tlTaskSchedulesList');
+    const empty = document.getElementById('tlTaskSchedulesEmpty');
+    if (!_tlSchedules.length) {
+      empty.classList.remove('d-none');
+      // Remove any old cards
+      container.querySelectorAll('.tl-schedule-card').forEach(el => el.remove());
+      return;
+    }
+    empty.classList.add('d-none');
+    container.querySelectorAll('.tl-schedule-card').forEach(el => el.remove());
+
+    _tlSchedules.forEach((s, idx) => {
+      const card = document.createElement('div');
+      card.className = 'tl-schedule-card d-flex align-items-center gap-3 border rounded px-3 py-2 mb-2 bg-white';
+      card.dataset.idx = idx;
+
+      const timeRange = (s.start_time && s.end_time)
+        ? `${s.start_time} – ${s.end_time}`
+        : (s.start_time || s.end_time || '—');
+
+      card.innerHTML = `
+        <span class="badge bg-primary-subtle text-primary-emphasis rounded-pill px-2" style="font-size:0.7rem;min-width:60px;">${timeRange}</span>
+        <div class="flex-grow-1">
+          <div class="fw-semibold small">${escapeHtml(s.task_name || s.task_id)}</div>
+          <div class="text-muted" style="font-size:0.72rem;">${escapeHtml(s.task_id)} · ${escapeHtml(s.task_type || 'nextgenTask')}</div>
+        </div>
+        <button class="btn btn-sm btn-outline-danger py-0 px-2 tl-remove-btn" type="button" data-idx="${idx}" style="font-size:0.75rem;">✕</button>
+      `;
+      container.appendChild(card);
+    });
+
+    container.querySelectorAll('.tl-remove-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const i = parseInt(btn.dataset.idx, 10);
+        _tlSchedules.splice(i, 1);
+        renderTlSchedules();
+      });
+    });
+  }
+
+  function escapeHtml(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function populateTlTaskSelect() {
+    const select = document.getElementById('tlTaskSelect');
+    const prev = select.value;
+    while (select.options.length > 1) select.remove(1);
+    _tlAvailableTasks.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.title ? `${t.title} (${t.id})` : t.id;
+      select.appendChild(opt);
+    });
+    select.value = prev;
+  }
+
+  document.getElementById('loadTlTasksBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('loadTlTasksBtn');
+    const spinner = document.getElementById('loadTlTasksSpinner');
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    try {
+      const res = await fetch('/api/integrations/teamleader/available-tasks');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'No se pudieron cargar las tareas.');
+      _tlAvailableTasks = Array.isArray(data.tasks) ? data.tasks : [];
+      populateTlTaskSelect();
+      window.showToast(`${_tlAvailableTasks.length} tarea(s) cargada(s) de Teamleader.`);
+    } catch (err) {
+      window.showToast(err.message, true);
+    } finally {
+      btn.disabled = false;
+      spinner.classList.add('d-none');
+    }
+  });
+
+  document.getElementById('addTlTaskBtn').addEventListener('click', () => {
+    const select = document.getElementById('tlTaskSelect');
+    const manualId = document.getElementById('tlTaskIdManual').value.trim();
+    const manualName = document.getElementById('tlTaskNameManual').value.trim();
+    const startTime = document.getElementById('tlTaskStart').value;
+    const endTime = document.getElementById('tlTaskEnd').value;
+
+    let taskId = '';
+    let taskName = '';
+    let taskType = 'nextgenTask';
+
+    if (select.value) {
+      taskId = select.value;
+      const found = _tlAvailableTasks.find(t => t.id === taskId);
+      taskName = found ? found.title : taskId;
+      taskType = found ? (found.type || 'nextgenTask') : 'nextgenTask';
+    } else if (manualId) {
+      taskId = manualId;
+      taskName = manualName || manualId;
+    }
+
+    if (!taskId) {
+      window.showToast('Selecciona o introduce el ID de una tarea.', true);
+      return;
+    }
+
+    _tlSchedules.push({ task_id: taskId, task_name: taskName, task_type: taskType, start_time: startTime, end_time: endTime });
+    renderTlSchedules();
+
+    // Reset inputs
+    select.value = '';
+    document.getElementById('tlTaskIdManual').value = '';
+    document.getElementById('tlTaskNameManual').value = '';
+    document.getElementById('tlTaskStart').value = '';
+    document.getElementById('tlTaskEnd').value = '';
+  });
+
+  document.getElementById('saveTlTaskSchedulesBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveTlTaskSchedulesBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch('/api/integrations/teamleader/task-schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(_tlSchedules),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'No se pudo guardar la lista de tareas.');
+      _tlSchedules = Array.isArray(data.schedules) ? data.schedules : _tlSchedules;
+      renderTlSchedules();
+      window.showToast('Lista de tareas guardada correctamente.');
+    } catch (err) {
+      window.showToast(err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // Load existing schedules on page load
+  loadTlSchedules();
 </script>
 {% endblock %}
