@@ -26,14 +26,27 @@ def tail_log_lines(limit: int = 100) -> list[str]:
     return scheduler_logs.tail_log_lines(limit)
 
 
+def _resolve_planned_hours(now: datetime, today_clocked_in: bool, today_clocked_out: bool) -> dict[str, time] | None:
+    """Return the schedule that should be shown as the current planned fichaje."""
+    hours = schedule.get_fichaje_hours(now)
+    if hours is not None and (not today_clocked_in or not today_clocked_out):
+        return hours
+
+    try:
+        next_working_entry = schedule.next_working_clock_in(now)
+    except RuntimeError:
+        return None
+    return schedule.get_fichaje_hours(next_working_entry)
+
+
 def get_status_payload() -> dict[str, object]:
     now = datetime.now(config.TZ)
-    hours = schedule.get_fichaje_hours(now)
     today = state.get_today_fichajes()
     today_clocked_in_at = today['entrada']
     today_clocked_out_at = today['salida']
     today_clocked_in = today_clocked_in_at is not None
     today_clocked_out = today_clocked_out_at is not None
+    hours = _resolve_planned_hours(now, today_clocked_in, today_clocked_out)
 
     base_payload = {
         'today_clocked_in': today_clocked_in,
