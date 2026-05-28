@@ -646,17 +646,19 @@ def save_task_schedules():
             return jsonify(
                 {'success': False, 'error': f'El elemento en posición {pos} debe incluir start_time y end_time.'}
             ), 400
-        normalized_start = _normalize_time_value(start_time)
-        if normalized_start is None:
+        try:
+            parsed_start = time.fromisoformat(start_time)
+        except ValueError:
             return jsonify({'success': False, 'error': f'start_time en posición {pos} debe tener formato HH:MM.'}), 400
-        normalized_end = _normalize_time_value(end_time)
-        if normalized_end is None:
+        try:
+            parsed_end = time.fromisoformat(end_time)
+        except ValueError:
             return jsonify({'success': False, 'error': f'end_time en posición {pos} debe tener formato HH:MM.'}), 400
-        parsed_start = time.fromisoformat(normalized_start)
-        parsed_end = time.fromisoformat(normalized_end)
-        if parsed_end <= parsed_start:
+        normalized_start = parsed_start.strftime('%H:%M')
+        normalized_end = parsed_end.strftime('%H:%M')
+        if parsed_end == parsed_start:
             return jsonify(
-                {'success': False, 'error': f'El elemento en posición {pos} debe tener end_time mayor que start_time.'}
+                {'success': False, 'error': f'El elemento en posición {pos} no puede tener la misma hora de inicio y fin.'}
             ), 400
         start_time = normalized_start
         end_time = normalized_end

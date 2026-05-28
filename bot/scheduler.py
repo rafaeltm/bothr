@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import date, datetime, time, timedelta
-from typing import Any
+from typing import TypedDict
 
 import config
 from bot import fichaje
@@ -227,9 +227,16 @@ def _parse_schedule_time(raw_value: str) -> time | None:
     return parsed.replace(second=0, microsecond=0)
 
 
-def _resolve_scheduled_teamleader_entries(entry_date: date) -> list[dict[str, Any]]:
+class _ResolvedTeamleaderEntry(TypedDict):
+    started_at: datetime
+    duration_seconds: int
+    subject_id: str
+    subject_type: str
+
+
+def _resolve_scheduled_teamleader_entries(entry_date: date) -> list[_ResolvedTeamleaderEntry]:
     schedules = config.read_task_schedules()
-    entries: list[dict[str, Any]] = []
+    entries: list[_ResolvedTeamleaderEntry] = []
     for schedule_entry in schedules:
         task_id = str(schedule_entry.get('task_id') or '').strip()
         if not task_id:
@@ -244,12 +251,14 @@ def _resolve_scheduled_teamleader_entries(entry_date: date) -> list[dict[str, An
             continue
         started_at = datetime.combine(entry_date, start_time, tzinfo=config.TZ)
         ended_at = datetime.combine(entry_date, end_time, tzinfo=config.TZ)
-        if ended_at <= started_at:
+        if ended_at == started_at:
             scheduler_logs.log_event(
-                f'Registro automático Teamleader: tarea omitida por rango horario inválido ({task_id}).',
+                f'Registro automático Teamleader: tarea omitida por rango horario sin duración ({task_id}).',
                 level=logging.WARNING,
             )
             continue
+        if ended_at < started_at:
+            ended_at += timedelta(days=1)
         entries.append(
             {
                 'started_at': started_at,
