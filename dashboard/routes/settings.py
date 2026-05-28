@@ -141,6 +141,14 @@ def _teamleader_disabled_response(redirect_on_error: bool = False):
     return jsonify({'success': False, 'error': message}), 400
 
 
+def _normalize_id(value: object) -> str:
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
+
+
 def _extract_task_customer_id(task: dict[str, object]) -> str:
     """Return the best-effort customer ID for a Teamleader task.
 
@@ -150,13 +158,6 @@ def _extract_task_customer_id(task: dict[str, object]) -> str:
     3) ``task.company.id``
     4) ``task.project.customer.id``
     """
-
-    def _normalize_id(value: object) -> str:
-        if value is None:
-            return ''
-        if isinstance(value, str):
-            return value.strip()
-        return str(value).strip()
 
     if not isinstance(task, dict):
         return ''
@@ -180,6 +181,31 @@ def _extract_task_customer_id(task: dict[str, object]) -> str:
             project_customer_id = _normalize_id(project_customer.get('id'))
             if project_customer_id:
                 return project_customer_id
+    return ''
+
+
+def _extract_task_customer_name(task: dict[str, object]) -> str:
+    if not isinstance(task, dict):
+        return ''
+    customer = task.get('customer')
+    if isinstance(customer, dict):
+        customer_name = str(customer.get('name') or customer.get('title') or '').strip()
+        if customer_name:
+            return customer_name
+    company = task.get('company')
+    if isinstance(company, dict):
+        company_name = str(company.get('name') or company.get('title') or '').strip()
+        if company_name:
+            return company_name
+    project = task.get('project')
+    if isinstance(project, dict):
+        project_customer = project.get('customer')
+        if isinstance(project_customer, dict):
+            project_customer_name = str(
+                project_customer.get('name') or project_customer.get('title') or ''
+            ).strip()
+            if project_customer_name:
+                return project_customer_name
     return ''
 
 
@@ -634,7 +660,7 @@ def teamleader_available_tasks():
     disabled_response = _teamleader_disabled_response()
     if disabled_response:
         return disabled_response
-    customer_id = (request.args.get('customer_id') or '').strip()
+    customer_id = (request.args.get('customer_id') or config.TEAMLEADER_CUSTOMER_ID or '').strip()
     if not customer_id:
         return jsonify({'success': False, 'error': 'Debes informar customer_id para cargar tareas.'}), 400
     normalized_customer_id = customer_id.casefold()
@@ -675,6 +701,45 @@ def teamleader_available_tasks():
     except Exception:
         logger.exception('No se pudieron obtener las tareas de Teamleader.')
         return jsonify({'success': False, 'error': 'No se pudieron obtener las tareas de Teamleader.'}), 500
+
+
+@settings_bp.get('/api/integrations/teamleader/available-customers')
+@auth.login_required
+def teamleader_available_customers():
+    disabled_response = _teamleader_disabled_response()
+    if disabled_response:
+        return disabled_response
+    try:
+        tasks, refresh_updates = teamleader.list_tasks()
+        if refresh_updates:
+            _persist_settings_updates(refresh_updates)
+        customer_map: dict[str, dict[str, str]] = {}
+        for task in tasks:
+            customer_id = _extract_task_customer_id(task)
+            if not customer_id:
+                continue
+            normalized_customer_id = customer_id.casefold()
+            customer_name = _extract_task_customer_name(task) or customer_id
+            existing = customer_map.get(normalized_customer_id)
+            if not existing:
+                customer_map[normalized_customer_id] = {'id': customer_id, 'name': customer_name}
+                continue
+            # Prefer a human-friendly name when earlier entries only contained the raw ID.
+            if existing['name'] == existing['id'] and customer_name != customer_id:
+                existing['name'] = customer_name
+        customers = sorted(customer_map.values(), key=lambda item: (item['name'].casefold(), item['id']))
+        return jsonify({'success': True, 'customers': customers})
+    except teamleader.TeamleaderError as exc:
+        logger.warning('Error al obtener customers de Teamleader: %s', exc)
+        return jsonify(
+            {
+                'success': False,
+                'error': teamleader.get_last_error_message('No se pudieron obtener los customers de Teamleader.'),
+            }
+        ), 400
+    except Exception:
+        logger.exception('No se pudieron obtener los customers de Teamleader.')
+        return jsonify({'success': False, 'error': 'No se pudieron obtener los customers de Teamleader.'}), 500
 
 
 @settings_bp.get('/api/integrations/teamleader/task-schedules')
