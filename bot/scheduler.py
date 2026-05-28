@@ -257,6 +257,7 @@ def _resolve_scheduled_teamleader_entries(entry_date: date) -> list[_ResolvedTea
                 level=logging.WARNING,
             )
             continue
+        # Allow schedules that cross midnight (e.g. 23:00 -> 02:00).
         if ended_at < started_at:
             ended_at += timedelta(days=1)
         entries.append(
