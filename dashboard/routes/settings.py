@@ -193,19 +193,15 @@ def _extract_task_customer_id(task: dict[str, object]) -> str:
 def _extract_reference_name(reference: object) -> str:
     if not isinstance(reference, dict):
         return ''
-    simple_name = str(
-        reference.get('name')
-        or reference.get('title')
-        or reference.get('display_name')
-        or reference.get('company_name')
-        or reference.get('legal_name')
-        or ''
-    ).strip()
-    if simple_name:
-        return simple_name
+    for key in ('name', 'title', 'display_name', 'company_name', 'legal_name'):
+        value = reference.get(key)
+        if value:
+            candidate = str(value).strip()
+            if candidate:
+                return candidate
     first_name = str(reference.get('first_name') or '').strip()
     last_name = str(reference.get('last_name') or '').strip()
-    return ' '.join(part for part in (first_name, last_name) if part).strip()
+    return ' '.join(part for part in (first_name, last_name) if part)
 
 
 def _extract_task_customer_name(task: dict[str, object]) -> str:
