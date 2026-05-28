@@ -478,7 +478,9 @@
         _tlSchedules = Array.isArray(data.schedules) ? data.schedules : [];
         renderTlSchedules();
       }
-    } catch (_) {}
+    } catch (_) {
+      window.showToast('No se pudieron cargar las tareas programadas.', true);
+    }
   }
 
   function renderTlSchedules() {
