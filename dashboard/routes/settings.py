@@ -638,11 +638,8 @@ def teamleader_add_entry():
         if hours_value <= 0:
             return jsonify({'success': False, 'error': 'hours debe ser mayor que cero.'}), 400
     else:
-        # Default: 7h on Fridays (jornada reducida), 9h otherwise
-        _FRIDAY = 4
-        _HOURS_FRIDAY = 7.0
-        _HOURS_NORMAL = 9.0
-        hours_value = _HOURS_FRIDAY if entry_date.weekday() == _FRIDAY else _HOURS_NORMAL
+        target_reference = datetime.combine(entry_date, time.min, tzinfo=config.TZ)
+        hours_value = float(schedule.get_work_hours(target_reference))
 
     duration_seconds = int(hours_value * 3600)
 
