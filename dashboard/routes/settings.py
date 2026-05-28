@@ -157,6 +157,7 @@ def _extract_task_customer_id(task: dict[str, object]) -> str:
     2) ``task.customer.id``
     3) ``task.company.id``
     4) ``task.project.customer.id``
+    5) ``task.project.company.id``
     """
 
     if not isinstance(task, dict):
@@ -181,31 +182,51 @@ def _extract_task_customer_id(task: dict[str, object]) -> str:
             project_customer_id = _normalize_id(project_customer.get('id'))
             if project_customer_id:
                 return project_customer_id
+        project_company = project.get('company')
+        if isinstance(project_company, dict):
+            project_company_id = _normalize_id(project_company.get('id'))
+            if project_company_id:
+                return project_company_id
     return ''
+
+
+def _extract_reference_name(reference: object) -> str:
+    if not isinstance(reference, dict):
+        return ''
+    for key in ('name', 'title', 'display_name', 'company_name', 'legal_name'):
+        value = reference.get(key)
+        if value:
+            candidate = str(value).strip()
+            if candidate:
+                return candidate
+    first_name = str(reference.get('first_name') or '').strip()
+    last_name = str(reference.get('last_name') or '').strip()
+    return ' '.join(part for part in (first_name, last_name) if part)
 
 
 def _extract_task_customer_name(task: dict[str, object]) -> str:
     if not isinstance(task, dict):
         return ''
-    customer = task.get('customer')
-    if isinstance(customer, dict):
-        customer_name = str(customer.get('name') or customer.get('title') or '').strip()
-        if customer_name:
-            return customer_name
-    company = task.get('company')
-    if isinstance(company, dict):
-        company_name = str(company.get('name') or company.get('title') or '').strip()
-        if company_name:
-            return company_name
+    direct_name = str(task.get('customer_name') or task.get('company_name') or '').strip()
+    if direct_name:
+        return direct_name
+    customer_name = _extract_reference_name(task.get('customer'))
+    if customer_name:
+        return customer_name
+    company_name = _extract_reference_name(task.get('company'))
+    if company_name:
+        return company_name
     project = task.get('project')
     if isinstance(project, dict):
-        project_customer = project.get('customer')
-        if isinstance(project_customer, dict):
-            project_customer_name = str(
-                project_customer.get('name') or project_customer.get('title') or ''
-            ).strip()
-            if project_customer_name:
-                return project_customer_name
+        project_customer_name = _extract_reference_name(project.get('customer'))
+        if project_customer_name:
+            return project_customer_name
+        project_company_name = _extract_reference_name(project.get('company'))
+        if project_company_name:
+            return project_company_name
+        project_owner_name = _extract_reference_name(project.get('owner'))
+        if project_owner_name:
+            return project_owner_name
     return ''
 
 
