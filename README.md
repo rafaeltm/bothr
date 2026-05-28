@@ -201,7 +201,9 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
 3. Set redirect URI to this dashboard callback:
    - `https://<your-host>/api/integrations/teamleader/callback`
 4. In Settings, define `TEAMLEADER_USER_ID` (your Teamleader user UUID) so only your fichajes are counted. Optionally define `TEAMLEADER_TASK_ID` (task UUID) and `TEAMLEADER_TASK_TYPE` (default `nextgenTask`) so requests also apply `subject: { type, id }`. You can tune `TEAMLEADER_PAGE_SIZE` (1-100) for `timeTracking.list` pagination. Configure exact hours (`TEAMLEADER_WORKDAY_START`, `TEAMLEADER_WORKDAY_END`) to analyze tracked time (for example `08:00` to `17:00`); Teamleader analysis uses the same working calendar as the scheduler (weekends/holidays excluded).
-5. Use **Conectar Teamleader** in Settings to complete OAuth and persist tokens.
+5. If `TEAMLEADER_AUTO_ENTRY=true`, the scheduler creates automatic Teamleader entries right after successful clock-in. It prioritizes **scheduled tasks** (`Settings → Tareas programadas`) and creates one entry per range; if no schedules are configured, it falls back to yesterday's task for the same `TEAMLEADER_USER_ID`.
+6. To keep tracking aligned with internal rules, define schedule entries with valid `start_time` + `end_time` and task IDs so automatic entries are always linked to Teamleader tasks (no project-only free-text tracking).
+7. Use **Conectar Teamleader** in Settings to complete OAuth and persist tokens.
 
 ## Development setup
 
