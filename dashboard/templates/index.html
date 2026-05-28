@@ -128,10 +128,12 @@
               <div class="col-md-3">
                 <label class="form-label">Horas</label>
                 <select class="form-select" id="teamleaderAddHours">
+                  <option value="auto" selected>Automático (según fecha)</option>
                   <option value="9">9h (jornada completa)</option>
                   <option value="7">7h (jornada reducida)</option>
                   <option value="custom">Personalizado…</option>
                 </select>
+                <div class="form-text">Detecta viernes y jornadas reducidas automáticamente.</div>
               </div>
               <div class="col-md-2" id="teamleaderAddHoursCustomWrapper" style="display:none;">
                 <label class="form-label">Horas exactas</label>
@@ -316,15 +318,11 @@
   });
 
   (function () {
-    const FRIDAY = 5;
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     document.getElementById('teamleaderAddDate').value = `${yyyy}-${mm}-${dd}`;
-    if (today.getDay() === FRIDAY) {
-      document.getElementById('teamleaderAddHours').value = '7';
-    }
   })();
 
   document.getElementById('teamleaderAddEntryBtn').addEventListener('click', async () => {
@@ -336,8 +334,11 @@
       }
       const dateValue = document.getElementById('teamleaderAddDate').value;
       const hoursSelect = document.getElementById('teamleaderAddHours').value;
+      const useAutomaticHours = hoursSelect === 'auto';
       let hoursValue;
-      if (hoursSelect === 'custom') {
+      if (useAutomaticHours) {
+        hoursValue = null;
+      } else if (hoursSelect === 'custom') {
         hoursValue = parseFloat(document.getElementById('teamleaderAddHoursCustom').value);
         if (isNaN(hoursValue) || hoursValue <= 0) {
           throw new Error('Introduce un número de horas válido.');
@@ -346,7 +347,8 @@
         hoursValue = parseFloat(hoursSelect);
       }
       const description = document.getElementById('teamleaderAddDescription').value.trim();
-      const body = { hours: hoursValue };
+      const body = {};
+      if (!useAutomaticHours) body.hours = hoursValue;
       if (dateValue) body.date = dateValue;
       if (description) body.description = description;
 
