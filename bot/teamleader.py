@@ -360,13 +360,19 @@ def add_time_entry(
 
 def list_tasks(
     page_size: int = 100,
+    include_details: bool = False,
 ) -> tuple[list[dict[str, Any]], dict[str, str]]:
     """Fetch available nextgen tasks from Teamleader API.
 
+    Args:
+        page_size: Number of tasks requested per page in ``tasks.list``.
+        include_details: When ``True``, enriches each entry using the dedicated
+            Teamleader task detail endpoint.
+
     Returns:
         A tuple of ``(tasks, refresh_updates)`` where *tasks* is a list of task
-        dicts (each with at least ``id`` and ``title``) and *refresh_updates*
-        contains any new token values that should be persisted.
+        dicts and *refresh_updates* contains any new token values that should be
+        persisted.
     """
     tasks: list[dict[str, Any]] = []
     refresh_updates: dict[str, str] = {}
@@ -385,7 +391,57 @@ def list_tasks(
         if len(page_entries) < page_size:
             break
         page_number += 1
-    return tasks, refresh_updates
+    if not include_details:
+        return tasks, refresh_updates
+
+    enriched_tasks: list[dict[str, Any]] = []
+    for task in tasks:
+        task_id = str(task.get('id') or '').strip()
+        if not task_id:
+            continue
+        task_details, detail_refresh_updates = _get_task_details(task_id)
+        refresh_updates.update(detail_refresh_updates)
+        if task_details:
+            detailed_task = dict(task_details)
+            detailed_task.setdefault('id', task_id)
+            enriched_tasks.append(detailed_task)
+            continue
+        enriched_tasks.append(task)
+    return enriched_tasks, refresh_updates
+
+
+def _extract_task_details_payload(response: dict[str, Any]) -> dict[str, Any] | None:
+    data = response.get('data')
+    if isinstance(data, dict):
+        return data
+    if isinstance(data, list):
+        first_entry = data[0] if data else None
+        if isinstance(first_entry, dict):
+            return first_entry
+    return None
+
+
+def _get_task_details(task_id: str) -> tuple[dict[str, Any] | None, dict[str, str]]:
+    refresh_updates: dict[str, str] = {}
+    last_error: TeamleaderError | None = None
+    endpoints = (
+        ('tasks.info', {'id': task_id}),
+        ('tasks.info', {'task_id': task_id}),
+        ('tasks.detail', {'id': task_id}),
+        ('tasks.detail', {'task_id': task_id}),
+    )
+    for method, payload in endpoints:
+        try:
+            response, page_refresh_updates = api_call(method, payload)
+            refresh_updates.update(page_refresh_updates)
+            task_details = _extract_task_details_payload(response)
+            if task_details:
+                return task_details, refresh_updates
+        except TeamleaderError as exc:
+            last_error = exc
+    if last_error:
+        logger.debug('No se pudieron obtener detalles completos de la tarea Teamleader %s: %s', task_id, last_error)
+    return None, refresh_updates
 
 
 def list_time_entries(

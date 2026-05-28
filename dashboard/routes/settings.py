@@ -230,6 +230,26 @@ def _extract_task_customer_name(task: dict[str, object]) -> str:
     return ''
 
 
+def _extract_task_project_id(task: dict[str, object]) -> str:
+    if not isinstance(task, dict):
+        return ''
+    project = task.get('project')
+    if isinstance(project, dict):
+        return _normalize_id(project.get('id'))
+    return ''
+
+
+def _extract_task_project_name(task: dict[str, object]) -> str:
+    if not isinstance(task, dict):
+        return ''
+    project = task.get('project')
+    if isinstance(project, dict):
+        project_name = _extract_reference_name(project)
+        if project_name:
+            return project_name
+    return ''
+
+
 @settings_bp.post('/api/integrations/teamleader/connect')
 @auth.login_required
 def teamleader_connect():
@@ -686,7 +706,7 @@ def teamleader_available_tasks():
         return jsonify({'success': False, 'error': 'Debes informar customer_id para cargar tareas.'}), 400
     normalized_customer_id = customer_id.casefold()
     try:
-        tasks, refresh_updates = teamleader.list_tasks()
+        tasks, refresh_updates = teamleader.list_tasks(include_details=True)
         if refresh_updates:
             _persist_settings_updates(refresh_updates)
         task_list = []
@@ -702,6 +722,10 @@ def teamleader_available_tasks():
                     'id': task_id,
                     'title': str(task.get('title') or task.get('summary') or task.get('name') or '').strip(),
                     'type': 'nextgenTask',
+                    'customer_id': task_customer_id,
+                    'customer_name': _extract_task_customer_name(task),
+                    'project_id': _extract_task_project_id(task),
+                    'project_name': _extract_task_project_name(task),
                 }
             )
         task_list.sort(
@@ -731,7 +755,7 @@ def teamleader_available_customers():
     if disabled_response:
         return disabled_response
     try:
-        tasks, refresh_updates = teamleader.list_tasks()
+        tasks, refresh_updates = teamleader.list_tasks(include_details=True)
         if refresh_updates:
             _persist_settings_updates(refresh_updates)
         customer_map: dict[str, dict[str, str]] = {}

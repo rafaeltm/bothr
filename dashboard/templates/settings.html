@@ -490,7 +490,7 @@
 
   // ── Task Schedules ──────────────────────────────────────────────────────────
 
-  let _tlAvailableTasks = [];   // [{id, title, type}]
+  let _tlAvailableTasks = [];   // [{id, title, type, customer_name, project_name}]
   let _tlCustomers = [];        // [{id, name}]
   let _tlSchedules = [];        // [{task_id, task_name, task_type, start_time, end_time}]
 
@@ -558,8 +558,13 @@
     while (select.options.length > 1) select.remove(1);
     _tlAvailableTasks.forEach(t => {
       const opt = document.createElement('option');
+      const taskTitle = (t.title || '').trim() || t.id;
+      const project = (t.project_name || '').trim();
+      const customer = (t.customer_name || '').trim();
+      const contextParts = [project, customer].filter(Boolean);
+      const contextLabel = contextParts.length ? ` · ${contextParts.join(' · ')}` : '';
       opt.value = t.id;
-      opt.textContent = t.title ? `${t.title} (${t.id})` : t.id;
+      opt.textContent = `${taskTitle} (${t.id})${contextLabel}`;
       select.appendChild(opt);
     });
     select.value = prev;
