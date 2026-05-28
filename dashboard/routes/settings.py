@@ -642,8 +642,8 @@ def teamleader_available_tasks():
             )
         task_list.sort(
             key=lambda task: (
-                str(task.get('title') or '').lower(),
-                str(task.get('id') or ''),
+                task['title'].lower(),
+                task['id'],
             )
         )
         return jsonify({'success': True, 'tasks': task_list})
