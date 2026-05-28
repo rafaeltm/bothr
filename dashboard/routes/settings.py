@@ -641,16 +641,24 @@ def save_task_schedules():
             return jsonify({'success': False, 'error': f'El elemento en posición {idx} no tiene task_id.'}), 400
         start_time = str(item.get('start_time') or '').strip()
         end_time = str(item.get('end_time') or '').strip()
-        if start_time:
-            normalized_start = _normalize_time_value(start_time)
-            if normalized_start is None:
-                return jsonify({'success': False, 'error': f'start_time en posición {idx} debe tener formato HH:MM.'}), 400
-            start_time = normalized_start
-        if end_time:
-            normalized_end = _normalize_time_value(end_time)
-            if normalized_end is None:
-                return jsonify({'success': False, 'error': f'end_time en posición {idx} debe tener formato HH:MM.'}), 400
-            end_time = normalized_end
+        if not start_time or not end_time:
+            return jsonify(
+                {'success': False, 'error': f'El elemento en posición {idx} debe incluir start_time y end_time.'}
+            ), 400
+        normalized_start = _normalize_time_value(start_time)
+        if normalized_start is None:
+            return jsonify({'success': False, 'error': f'start_time en posición {idx} debe tener formato HH:MM.'}), 400
+        normalized_end = _normalize_time_value(end_time)
+        if normalized_end is None:
+            return jsonify({'success': False, 'error': f'end_time en posición {idx} debe tener formato HH:MM.'}), 400
+        parsed_start = time.fromisoformat(normalized_start)
+        parsed_end = time.fromisoformat(normalized_end)
+        if parsed_end <= parsed_start:
+            return jsonify(
+                {'success': False, 'error': f'El elemento en posición {idx} debe tener end_time mayor que start_time.'}
+            ), 400
+        start_time = normalized_start
+        end_time = normalized_end
         validated.append({
             'task_id': task_id,
             'task_name': str(item.get('task_name') or '').strip(),

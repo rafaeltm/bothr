@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
+from typing import Any
 
 import config
 from bot import fichaje
@@ -134,6 +135,30 @@ async def _auto_teamleader_entry() -> None:
             scheduler_logs.log_event('Registro automático en Teamleader omitido: ya existe un fichaje para hoy.')
             return
 
+        user_id = (config.TEAMLEADER_USER_ID or '').strip() or None
+        scheduled_entries = _resolve_scheduled_teamleader_entries(now.date())
+        if scheduled_entries:
+            total_duration_seconds = 0
+            for scheduled_entry in scheduled_entries:
+                _, refresh_updates = teamleader.add_time_entry(
+                    started_at=scheduled_entry['started_at'],
+                    duration_seconds=scheduled_entry['duration_seconds'],
+                    subject_id=scheduled_entry['subject_id'],
+                    subject_type=scheduled_entry['subject_type'],
+                    user_id=user_id,
+                )
+                if refresh_updates:
+                    config.persist_token_updates(refresh_updates)
+                total_duration_seconds += scheduled_entry['duration_seconds']
+            msg = (
+                'Registros Teamleader añadidos automáticamente: '
+                f"{now.date().isoformat()} · {len(scheduled_entries)} tarea(s) · "
+                f'{total_duration_seconds / 3600:.2f}h.'
+            )
+            scheduler_logs.log_event(msg)
+            await scheduler_logs.notify_telegram(msg)
+            return
+
         yesterday = (now - timedelta(days=1)).date().isoformat()
         yesterday_entries, refresh_updates = teamleader.list_time_entries(
             yesterday,
@@ -150,7 +175,6 @@ async def _auto_teamleader_entry() -> None:
         started_at = datetime.combine(now.date(), workday_start, tzinfo=config.TZ)
         subject_id = (config.TEAMLEADER_TASK_ID or '').strip() or None
         subject_type = (config.TEAMLEADER_TASK_TYPE or 'nextgenTask').strip()
-        user_id = (config.TEAMLEADER_USER_ID or '').strip() or None
         # Entries are sorted ascending by starts_on in Teamleader list API, so
         # reverse to check the most recent one first. If no subject is found,
         # configured values are used.
@@ -167,6 +191,14 @@ async def _auto_teamleader_entry() -> None:
                 f'Registro automático Teamleader: usando tarea del día anterior ({subject_type}:{subject_id}).'
             )
             break
+        if not subject_id:
+            msg = (
+                'Registro automático Teamleader omitido: configura TEAMLEADER_TASK_ID '
+                'o define tareas programadas con ID.'
+            )
+            scheduler_logs.log_event(msg, level=logging.WARNING)
+            await scheduler_logs.notify_telegram(msg)
+            return
         _, refresh_updates = teamleader.add_time_entry(
             started_at=started_at,
             duration_seconds=duration_seconds,
@@ -182,6 +214,52 @@ async def _auto_teamleader_entry() -> None:
     except Exception as exc:
         scheduler_logs.log_event(f'Error al añadir registro automático en Teamleader: {exc}', level=logging.WARNING)
         await scheduler_logs.notify_telegram(f'Error al añadir registro automático en Teamleader: {exc}')
+
+
+def _parse_schedule_time(raw_value: str) -> time | None:
+    normalized = raw_value.strip()
+    if not normalized:
+        return None
+    try:
+        parsed = time.fromisoformat(normalized)
+    except ValueError:
+        return None
+    return parsed.replace(second=0, microsecond=0)
+
+
+def _resolve_scheduled_teamleader_entries(entry_date: date) -> list[dict[str, Any]]:
+    schedules = config.read_task_schedules()
+    entries: list[dict[str, Any]] = []
+    for schedule_entry in schedules:
+        task_id = str(schedule_entry.get('task_id') or '').strip()
+        if not task_id:
+            continue
+        start_time = _parse_schedule_time(str(schedule_entry.get('start_time') or ''))
+        end_time = _parse_schedule_time(str(schedule_entry.get('end_time') or ''))
+        if not start_time or not end_time:
+            scheduler_logs.log_event(
+                f'Registro automático Teamleader: tarea omitida por horas inválidas ({task_id}).',
+                level=logging.WARNING,
+            )
+            continue
+        started_at = datetime.combine(entry_date, start_time, tzinfo=config.TZ)
+        ended_at = datetime.combine(entry_date, end_time, tzinfo=config.TZ)
+        if ended_at <= started_at:
+            scheduler_logs.log_event(
+                f'Registro automático Teamleader: tarea omitida por rango horario inválido ({task_id}).',
+                level=logging.WARNING,
+            )
+            continue
+        entries.append(
+            {
+                'started_at': started_at,
+                'duration_seconds': int((ended_at - started_at).total_seconds()),
+                'subject_id': task_id,
+                'subject_type': str(schedule_entry.get('task_type') or 'nextgenTask').strip() or 'nextgenTask',
+            }
+        )
+    entries.sort(key=lambda item: item['started_at'])
+    return entries
 
 
 async def run() -> None:
