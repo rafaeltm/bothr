@@ -566,13 +566,13 @@
   }
 
   function getFilteredTlCustomers() {
-    const query = document.getElementById('tlCustomerFilterInput')?.value.trim().toLocaleLowerCase();
+    const query = document.getElementById('tlCustomerFilterInput')?.value.trim().toLowerCase();
     if (!query) {
       return _tlCustomers;
     }
     return _tlCustomers.filter(customer => {
-      const customerId = String(customer.id || '').toLocaleLowerCase();
-      const customerName = String(customer.name || '').toLocaleLowerCase();
+      const customerId = String(customer.id || '').toLowerCase();
+      const customerName = String(customer.name || '').toLowerCase();
       return customerId.includes(query) || customerName.includes(query);
     });
   }
