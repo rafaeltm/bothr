@@ -358,6 +358,36 @@ def add_time_entry(
     return api_call('timeTracking.add', payload)
 
 
+def list_tasks(
+    page_size: int = 100,
+) -> tuple[list[dict[str, Any]], dict[str, str]]:
+    """Fetch available nextgen tasks from Teamleader API.
+
+    Returns:
+        A tuple of ``(tasks, refresh_updates)`` where *tasks* is a list of task
+        dicts (each with at least ``id`` and ``title``) and *refresh_updates*
+        contains any new token values that should be persisted.
+    """
+    tasks: list[dict[str, Any]] = []
+    refresh_updates: dict[str, str] = {}
+    page_number = 1
+    while True:
+        payload: dict[str, Any] = {
+            'page': {'size': page_size, 'number': page_number},
+        }
+        response, page_refresh_updates = api_call('tasks.list', payload)
+        refresh_updates.update(page_refresh_updates)
+        data = response.get('data')
+        if not isinstance(data, list):
+            break
+        page_entries = [entry for entry in data if isinstance(entry, dict)]
+        tasks.extend(page_entries)
+        if len(page_entries) < page_size:
+            break
+        page_number += 1
+    return tasks, refresh_updates
+
+
 def list_time_entries(
     started_after: str,
     started_before: str,
