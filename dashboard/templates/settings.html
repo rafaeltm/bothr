@@ -223,8 +223,14 @@
                 <h3 class="h6 mb-1">Tareas programadas</h3>
                 <p class="text-muted small mb-0">Define las tareas de Teamleader para automatizar fichajes siguiendo las normas internas (cada tarea debe tener hora de inicio y fin).</p>
               </div>
+              <input
+                class="form-control form-control-sm ms-auto"
+                id="tlCustomerFilterInput"
+                type="search"
+                placeholder="Filtrar cliente por nombre o ID"
+              >
               <select
-                class="form-select form-select-sm ms-auto"
+                class="form-select form-select-sm"
                 id="tlCustomerSelect"
                 name="TEAMLEADER_CUSTOMER_ID"
               >
@@ -300,6 +306,7 @@
     'teamleaderFetchBtn',
     'teamleaderFrom',
     'teamleaderTo',
+    'tlCustomerFilterInput',
     'tlCustomerSelect',
     'loadTlCustomersBtn',
     'loadTlTasksBtn',
@@ -558,11 +565,28 @@
     select.value = prev;
   }
 
+  function getFilteredTlCustomers() {
+    const query = document.getElementById('tlCustomerFilterInput')?.value.trim().toLocaleLowerCase();
+    if (!query) {
+      return _tlCustomers;
+    }
+    return _tlCustomers.filter(customer => {
+      const customerId = String(customer.id || '').toLocaleLowerCase();
+      const customerName = String(customer.name || '').toLocaleLowerCase();
+      return customerId.includes(query) || customerName.includes(query);
+    });
+  }
+
   function populateTlCustomerSelect(preferredValue = '') {
     const select = document.getElementById('tlCustomerSelect');
     const previousValue = select.value;
+    const placeholder = select.options[0];
+    const filteredCustomers = getFilteredTlCustomers();
+    placeholder.textContent = filteredCustomers.length || !_tlCustomers.length
+      ? '— Selecciona cliente —'
+      : '— No hay clientes que coincidan —';
     while (select.options.length > 1) select.remove(1);
-    _tlCustomers.forEach(c => {
+    filteredCustomers.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
       opt.textContent = c.name && c.name !== c.id ? `${c.name} (${c.id})` : c.id;
@@ -601,6 +625,10 @@
 
   document.getElementById('loadTlCustomersBtn').addEventListener('click', async () => {
     await loadTlCustomers(true);
+  });
+
+  document.getElementById('tlCustomerFilterInput').addEventListener('input', () => {
+    populateTlCustomerSelect();
   });
 
   document.getElementById('loadTlTasksBtn').addEventListener('click', async () => {
