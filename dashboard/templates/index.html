@@ -334,18 +334,21 @@
       }
       const dateValue = document.getElementById('teamleaderAddDate').value;
       const hoursSelect = document.getElementById('teamleaderAddHours').value;
+      const useAutomaticHours = hoursSelect === 'auto';
       let hoursValue;
-      if (hoursSelect === 'custom') {
+      if (useAutomaticHours) {
+        hoursValue = null;
+      } else if (hoursSelect === 'custom') {
         hoursValue = parseFloat(document.getElementById('teamleaderAddHoursCustom').value);
         if (isNaN(hoursValue) || hoursValue <= 0) {
           throw new Error('Introduce un número de horas válido.');
         }
-      } else if (hoursSelect !== 'auto') {
+      } else {
         hoursValue = parseFloat(hoursSelect);
       }
       const description = document.getElementById('teamleaderAddDescription').value.trim();
       const body = {};
-      if (hoursValue !== undefined) body.hours = hoursValue;
+      if (!useAutomaticHours) body.hours = hoursValue;
       if (dateValue) body.date = dateValue;
       if (description) body.description = description;
 
