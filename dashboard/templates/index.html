@@ -8,10 +8,14 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div>
             <h1 class="h3 mb-1">Estado del fichaje</h1>
-            <p class="text-muted mb-0">Todo lo importante en un vistazo, actualizado cada 30 segundos.</p>
+            <p class="text-muted mb-0">Resumen rápido para saber qué toca ahora y cómo va el día.</p>
           </div>
           <span class="badge rounded-pill status-badge" id="statusBadge">Cargando...</span>
         </div>
+        <div class="last-sync small text-muted mb-3">
+          Estado: <span id="statusLastSync">-</span> · Teamleader: <span id="teamleaderLastSync">-</span>
+        </div>
+        <h2 class="section-title">Resumen de hoy</h2>
         <div class="row g-3">
           <div class="col-lg-3 col-md-6">
             <div class="status-box">
@@ -52,6 +56,8 @@
           </div>
         </div>
         <div class="status-box mt-3">
+          <h3 class="h6 mb-1">Ajuste rápido</h3>
+          <p class="small text-muted mb-3">Define tu hora de entrada objetivo para recalcular la planificación automática.</p>
           <div class="row g-3 align-items-end">
             <div class="col-md-6">
               <label class="form-label text-muted small mb-1" for="preferredClockIn">Hora deseada de entrada</label>
@@ -69,10 +75,11 @@
         <div class="d-flex justify-content-between align-items-center mb-3 gap-3 flex-wrap">
           <div>
             <h2 class="h4 mb-1">Teamleader</h2>
-            <p class="text-muted mb-0">Resumen de horas y registro del día actual.</p>
+            <p class="text-muted mb-0">Estado de horas y próximos registros sincronizados.</p>
           </div>
           <span class="badge rounded-pill text-bg-secondary" id="teamleaderStatusBadge">Cargando...</span>
         </div>
+        <h3 class="section-title">Resumen Teamleader</h3>
         <div class="row g-3">
           <div class="col-lg-4 col-md-6">
             <div class="status-box">
@@ -101,6 +108,7 @@
                   <button class="btn btn-outline-primary" type="button" data-teamleader-period="monthly">Mes</button>
                 </div>
               </div>
+              <div class="small text-muted mt-2">Cambia el periodo para ver acumulado diario, semanal o mensual.</div>
             </div>
           </div>
         </div>
@@ -108,38 +116,40 @@
           <div class="text-muted small">⏭️ Próximo registro previsto</div>
           <div class="fs-6 fw-semibold" id="teamleaderNextEntry">-</div>
         </div>
-        <div class="row g-3 mt-1">
-          <div class="col-12">
-            <h3 class="h6 mb-2">Añadir registro Teamleader</h3>
+        <details class="status-box mt-3 teamleader-manual-entry">
+          <summary>Añadir registro manual (opcional)</summary>
+          <div class="pt-3">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label">Fecha</label>
+                <input class="form-control" type="date" id="teamleaderAddDate">
+                <div class="form-text">Fecha del registro (por defecto: hoy).</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Horas</label>
+                <select class="form-select" id="teamleaderAddHours">
+                  <option value="9">9h (jornada completa)</option>
+                  <option value="7">7h (jornada reducida)</option>
+                  <option value="custom">Personalizado…</option>
+                </select>
+              </div>
+              <div class="col-md-2" id="teamleaderAddHoursCustomWrapper" style="display:none;">
+                <label class="form-label">Horas exactas</label>
+                <input class="form-control" type="number" id="teamleaderAddHoursCustom" min="0.5" max="24" step="0.5" value="9">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Descripción (opcional)</label>
+                <input class="form-control" id="teamleaderAddDescription" placeholder="Trabajo del día">
+              </div>
+              <div class="col-12">
+                <button class="btn btn-success" id="teamleaderAddEntryBtn" type="button">Añadir registro</button>
+              </div>
+              <div class="col-12">
+                <div class="small" id="teamleaderAddResult"></div>
+              </div>
+            </div>
           </div>
-          <div class="col-md-4">
-            <label class="form-label">Fecha</label>
-            <input class="form-control" type="date" id="teamleaderAddDate">
-            <div class="form-text">Fecha del registro (por defecto: hoy).</div>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Horas</label>
-            <select class="form-select" id="teamleaderAddHours">
-              <option value="9">9h (jornada completa)</option>
-              <option value="7">7h (jornada reducida)</option>
-              <option value="custom">Personalizado…</option>
-            </select>
-          </div>
-          <div class="col-md-2" id="teamleaderAddHoursCustomWrapper" style="display:none;">
-            <label class="form-label">Horas exactas</label>
-            <input class="form-control" type="number" id="teamleaderAddHoursCustom" min="0.5" max="24" step="0.5" value="9">
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">Descripción (opcional)</label>
-            <input class="form-control" id="teamleaderAddDescription" placeholder="Trabajo del día">
-          </div>
-          <div class="col-12">
-            <button class="btn btn-success" id="teamleaderAddEntryBtn" type="button">Añadir registro</button>
-          </div>
-          <div class="col-12">
-            <div class="small" id="teamleaderAddResult"></div>
-          </div>
-        </div>
+        </details>
       </div>
     </div>
   </div>
@@ -155,6 +165,10 @@
     const action = data.next_action || '-';
     const actionAt = data.next_action_at || '';
     return actionAt ? `${action} (${actionAt})` : action;
+  }
+
+  function formatLastSync() {
+    return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   }
 
   function formatTodayStatus(timestamp, fallbackDone) {
@@ -218,8 +232,10 @@
       const nextEntryLabel = formatTeamleaderNextEntry(summary.next_entry_preview);
       document.getElementById('teamleaderNextEntry').textContent = nextEntryLabel;
       document.getElementById('mainNextTeamleader').textContent = `Teamleader próximo: ${nextEntryLabel}`;
+      document.getElementById('teamleaderLastSync').textContent = formatLastSync();
     } catch (error) {
       setTeamleaderUnavailable('No disponible');
+      document.getElementById('teamleaderLastSync').textContent = formatLastSync();
       if (showErrorToast) {
         window.showToast(error.message, true);
       }
@@ -249,6 +265,7 @@
       document.getElementById('plannedIn').textContent = getPlannedTimeLabel(data.planned_clock_in);
       document.getElementById('plannedOut').textContent = getPlannedTimeLabel(data.planned_clock_out);
       document.getElementById('statusBadge').textContent = formatNextAction(data);
+      document.getElementById('statusLastSync').textContent = formatLastSync();
       window.renderLastError(data.last_error, 'lastErrorBox', 'lastErrorText', 'markLastErrorSeenBtn');
     } catch (error) {
       window.showToast('No se pudo actualizar el estado.', true);

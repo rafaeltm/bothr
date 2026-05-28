@@ -175,6 +175,42 @@ body.standalone-mode .mobile-header {
   border-color: rgba(13, 110, 253, 0.28);
 }
 
+.section-title {
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+}
+
+.last-sync {
+  padding: 0.4rem 0.7rem;
+  border-radius: 0.55rem;
+  background: rgba(226, 232, 240, 0.6);
+}
+
+.teamleader-manual-entry summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #0b3c7f;
+  list-style: none;
+}
+
+.teamleader-manual-entry summary::-webkit-details-marker {
+  display: none;
+}
+
+.teamleader-manual-entry summary::before {
+  content: '▸';
+  margin-right: 0.45rem;
+  color: #2563eb;
+}
+
+.teamleader-manual-entry[open] summary::before {
+  content: '▾';
+}
+
 /* Force 2-column grid on phones for status boxes */
 @media (max-width: 575.98px) {
   .status-box .fs-4,
