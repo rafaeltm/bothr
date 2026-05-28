@@ -18,6 +18,8 @@ _STATE_TTL = timedelta(minutes=10)
 _MAX_PUBLIC_ERROR_LENGTH = 300
 _oauth_states_lock = threading.Lock()
 _oauth_states: dict[str, datetime] = {}
+_task_detail_endpoint_lock = threading.Lock()
+_task_detail_endpoint: tuple[str, str] | None = None
 _last_error_state = threading.local()
 _STACK_TRACE_MARKERS = ('traceback', 'file "', 'line ')
 _PUBLIC_ERROR_ALLOWED_PATTERN = re.compile(r'^[\w\s.,:;()\-_/!?]+$')
@@ -422,20 +424,31 @@ def _extract_task_details_payload(response: dict[str, Any]) -> dict[str, Any] | 
 
 
 def _get_task_details(task_id: str) -> tuple[dict[str, Any] | None, dict[str, str]]:
+    global _task_detail_endpoint
     refresh_updates: dict[str, str] = {}
     last_error: TeamleaderError | None = None
-    endpoints = (
+    endpoints: list[tuple[str, dict[str, str]]] = [
         ('tasks.info', {'id': task_id}),
         ('tasks.info', {'task_id': task_id}),
         ('tasks.detail', {'id': task_id}),
         ('tasks.detail', {'task_id': task_id}),
-    )
+    ]
+    with _task_detail_endpoint_lock:
+        preferred_endpoint = _task_detail_endpoint
+    if preferred_endpoint:
+        method, payload_key = preferred_endpoint
+        preferred_payload = {'id': task_id} if payload_key == 'id' else {'task_id': task_id}
+        endpoints = [entry for entry in endpoints if entry != (method, preferred_payload)]
+        endpoints.insert(0, (method, preferred_payload))
     for method, payload in endpoints:
         try:
             response, page_refresh_updates = api_call(method, payload)
             refresh_updates.update(page_refresh_updates)
             task_details = _extract_task_details_payload(response)
             if task_details:
+                payload_key = 'task_id' if 'task_id' in payload else 'id'
+                with _task_detail_endpoint_lock:
+                    _task_detail_endpoint = (method, payload_key)
                 return task_details, refresh_updates
         except TeamleaderError as exc:
             last_error = exc
