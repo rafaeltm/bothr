@@ -223,11 +223,20 @@
                 <h3 class="h6 mb-1">Tareas programadas</h3>
                 <p class="text-muted small mb-0">Define las tareas de Teamleader para automatizar fichajes siguiendo las normas internas (cada tarea debe tener hora de inicio y fin).</p>
               </div>
-              <input
-                class="form-control form-control-sm ms-auto"
-                id="tlCustomerId"
-                placeholder="Customer ID"
+              <select
+                class="form-select form-select-sm ms-auto"
+                id="tlCustomerSelect"
+                name="TEAMLEADER_CUSTOMER_ID"
               >
+                <option value="">— Selecciona cliente —</option>
+                {% if settings.TEAMLEADER_CUSTOMER_ID %}
+                  <option value="{{ settings.TEAMLEADER_CUSTOMER_ID }}" selected>Cargando cliente... ({{ settings.TEAMLEADER_CUSTOMER_ID }})</option>
+                {% endif %}
+              </select>
+              <button class="btn btn-sm btn-outline-secondary" id="loadTlCustomersBtn" type="button">
+                <span id="loadTlCustomersSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
+                Cargar clientes
+              </button>
               <button class="btn btn-sm btn-outline-secondary" id="loadTlTasksBtn" type="button">
                 <span id="loadTlTasksSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
                 Cargar tareas de Teamleader
@@ -291,7 +300,8 @@
     'teamleaderFetchBtn',
     'teamleaderFrom',
     'teamleaderTo',
-    'tlCustomerId',
+    'tlCustomerSelect',
+    'loadTlCustomersBtn',
     'loadTlTasksBtn',
     'addTlTaskBtn',
     'saveTlTaskSchedulesBtn',
@@ -474,6 +484,7 @@
   // ── Task Schedules ──────────────────────────────────────────────────────────
 
   let _tlAvailableTasks = [];   // [{id, title, type}]
+  let _tlCustomers = [];        // [{id, name}]
   let _tlSchedules = [];        // [{task_id, task_name, task_type, start_time, end_time}]
 
   async function loadTlSchedules() {
@@ -547,12 +558,57 @@
     select.value = prev;
   }
 
+  function populateTlCustomerSelect(preferredValue = '') {
+    const select = document.getElementById('tlCustomerSelect');
+    const previousValue = select.value;
+    while (select.options.length > 1) select.remove(1);
+    _tlCustomers.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name && c.name !== c.id ? `${c.name} (${c.id})` : c.id;
+      select.appendChild(opt);
+    });
+    const nextValue = preferredValue || previousValue;
+    if (nextValue) {
+      select.value = nextValue;
+    }
+  }
+
+  async function loadTlCustomers(showToast = false) {
+    const btn = document.getElementById('loadTlCustomersBtn');
+    const spinner = document.getElementById('loadTlCustomersSpinner');
+    const preferredValue = document.getElementById('tlCustomerSelect').value;
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    try {
+      const res = await fetch('/api/integrations/teamleader/available-customers');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'No se pudieron cargar los clientes.');
+      _tlCustomers = Array.isArray(data.customers) ? data.customers : [];
+      populateTlCustomerSelect(preferredValue);
+      if (showToast) {
+        window.showToast(`${_tlCustomers.length} cliente(s) cargado(s).`);
+      }
+    } catch (err) {
+      if (showToast) {
+        window.showToast(err.message, true);
+      }
+    } finally {
+      btn.disabled = false;
+      spinner.classList.add('d-none');
+    }
+  }
+
+  document.getElementById('loadTlCustomersBtn').addEventListener('click', async () => {
+    await loadTlCustomers(true);
+  });
+
   document.getElementById('loadTlTasksBtn').addEventListener('click', async () => {
     const btn = document.getElementById('loadTlTasksBtn');
     const spinner = document.getElementById('loadTlTasksSpinner');
-    const customerId = document.getElementById('tlCustomerId').value.trim();
+    const customerId = document.getElementById('tlCustomerSelect').value.trim();
     if (!customerId) {
-      window.showToast('Indica un customer ID para cargar tareas.', true);
+      window.showToast('Selecciona un cliente para cargar tareas.', true);
       return;
     }
     btn.disabled = true;
@@ -632,6 +688,7 @@
   });
 
   // Load existing schedules on page load
+  loadTlCustomers(false);
   loadTlSchedules();
 </script>
 {% endblock %}
