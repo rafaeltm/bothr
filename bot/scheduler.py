@@ -27,6 +27,7 @@ def tail_log_lines(limit: int = 100) -> list[str]:
 
 
 def _resolve_planned_hours(now: datetime, today_clocked_in: bool, today_clocked_out: bool) -> dict[str, time] | None:
+    """Return the schedule that should be shown as the current planned fichaje."""
     hours = schedule.get_fichaje_hours(now)
     if hours is not None and (not today_clocked_in or not today_clocked_out):
         return hours
@@ -34,7 +35,7 @@ def _resolve_planned_hours(now: datetime, today_clocked_in: bool, today_clocked_
     try:
         next_working_entry = schedule.next_working_clock_in(now)
     except RuntimeError:
-        return hours
+        return None
     return schedule.get_fichaje_hours(next_working_entry)
 
 
