@@ -142,6 +142,15 @@ def _teamleader_disabled_response(redirect_on_error: bool = False):
 
 
 def _extract_task_customer_id(task: dict[str, object]) -> str:
+    """Return the best-effort customer ID for a Teamleader task.
+
+    Extraction precedence is:
+    1) ``task.customer_id``
+    2) ``task.customer.id``
+    3) ``task.company.id``
+    4) ``task.project.customer.id``
+    """
+
     def _normalize_id(value: object) -> str:
         if value is None:
             return ''
@@ -628,6 +637,7 @@ def teamleader_available_tasks():
     customer_id = (request.args.get('customer_id') or '').strip()
     if not customer_id:
         return jsonify({'success': False, 'error': 'Debes informar customer_id para cargar tareas.'}), 400
+    normalized_customer_id = customer_id.casefold()
     try:
         tasks, refresh_updates = teamleader.list_tasks()
         if refresh_updates:
@@ -638,7 +648,7 @@ def teamleader_available_tasks():
             if not task_id:
                 continue
             task_customer_id = _extract_task_customer_id(task)
-            if task_customer_id != customer_id:
+            if task_customer_id.casefold() != normalized_customer_id:
                 continue
             task_list.append(
                 {
