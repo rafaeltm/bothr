@@ -618,30 +618,34 @@ def teamleader_available_tasks():
     disabled_response = _teamleader_disabled_response()
     if disabled_response:
         return disabled_response
+    customer_id = (request.args.get('customer_id') or '').strip()
+    if not customer_id:
+        return jsonify({'success': False, 'error': 'Debes informar customer_id para cargar tareas.'}), 400
     try:
         tasks, refresh_updates = teamleader.list_tasks()
         if refresh_updates:
             _persist_settings_updates(refresh_updates)
-        task_list = [
-            {
-                'id': str(t.get('id') or '').strip(),
-                'title': str(t.get('title') or t.get('summary') or t.get('name') or '').strip(),
-                'type': 'nextgenTask',
-                'customer_id': _extract_task_customer_id(t),
-            }
-            for t in tasks
-            if str(t.get('id') or '').strip()
-        ]
+        task_list = []
+        for task in tasks:
+            task_id = str(task.get('id') or '').strip()
+            if not task_id:
+                continue
+            task_customer_id = _extract_task_customer_id(task)
+            if task_customer_id != customer_id:
+                continue
+            task_list.append(
+                {
+                    'id': task_id,
+                    'title': str(task.get('title') or task.get('summary') or task.get('name') or '').strip(),
+                    'type': 'nextgenTask',
+                }
+            )
         task_list.sort(
             key=lambda task: (
-                1 if not task.get('customer_id') else 0,
-                str(task.get('customer_id') or ''),
                 str(task.get('title') or '').lower(),
                 str(task.get('id') or ''),
             )
         )
-        for task in task_list:
-            task.pop('customer_id', None)
         return jsonify({'success': True, 'tasks': task_list})
     except teamleader.TeamleaderError as exc:
         logger.warning('Error al obtener tareas de Teamleader: %s', exc)
