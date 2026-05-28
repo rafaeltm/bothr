@@ -188,8 +188,8 @@ For safety, command responses are restricted to the configured `CHAT_ID`.
 | `GET` | `/api/integrations/teamleader/entries` | Lists Teamleader fichajes/time entries for a date range. |
 | `GET` | `/api/integrations/teamleader/analysis` | Returns expected vs clocked hours analysis for a date range. |
 | `GET` | `/api/integrations/teamleader/dashboard-summary` | Returns Teamleader totals for the current day/week/month and whether today already has records. |
-| `GET` | `/api/integrations/teamleader/available-customers` | Lists Teamleader customers inferred from available tasks for selection in Settings. |
-| `GET` | `/api/integrations/teamleader/available-tasks` | Lists Teamleader tasks filtered by `customer_id` (or `TEAMLEADER_CUSTOMER_ID` if omitted). |
+| `GET` | `/api/integrations/teamleader/available-customers` | Lists Teamleader customers using full task details (task detail query per task) for richer names in Settings. |
+| `GET` | `/api/integrations/teamleader/available-tasks` | Lists Teamleader tasks filtered by `customer_id`, including enriched project/customer context from task detail queries. |
 | `GET` | `/api/festivos` | Returns the configured holidays. |
 | `POST` | `/api/festivos` | Replaces the configured holidays list. |
 | `GET` | `/api/jornada_reducida` | Returns reduced-workday dates. |
