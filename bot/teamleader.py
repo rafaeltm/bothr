@@ -415,7 +415,7 @@ def _extract_task_details_payload(response: dict[str, Any]) -> dict[str, Any] | 
     if isinstance(data, dict):
         return data
     if isinstance(data, list):
-        first_entry = data[0] if data else None
+        first_entry = next(iter(data), None)
         if isinstance(first_entry, dict):
             return first_entry
     return None
