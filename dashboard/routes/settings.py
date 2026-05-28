@@ -141,6 +141,32 @@ def _teamleader_disabled_response(redirect_on_error: bool = False):
     return jsonify({'success': False, 'error': message}), 400
 
 
+def _extract_task_customer_id(task: dict[str, object]) -> str:
+    if not isinstance(task, dict):
+        return ''
+    direct_customer_id = str(task.get('customer_id') or '').strip()
+    if direct_customer_id:
+        return direct_customer_id
+    customer = task.get('customer')
+    if isinstance(customer, dict):
+        customer_id = str(customer.get('id') or '').strip()
+        if customer_id:
+            return customer_id
+    company = task.get('company')
+    if isinstance(company, dict):
+        company_id = str(company.get('id') or '').strip()
+        if company_id:
+            return company_id
+    project = task.get('project')
+    if isinstance(project, dict):
+        project_customer = project.get('customer')
+        if isinstance(project_customer, dict):
+            project_customer_id = str(project_customer.get('id') or '').strip()
+            if project_customer_id:
+                return project_customer_id
+    return ''
+
+
 @settings_bp.post('/api/integrations/teamleader/connect')
 @auth.login_required
 def teamleader_connect():
@@ -601,10 +627,21 @@ def teamleader_available_tasks():
                 'id': str(t.get('id') or '').strip(),
                 'title': str(t.get('title') or t.get('summary') or t.get('name') or '').strip(),
                 'type': 'nextgenTask',
+                'customer_id': _extract_task_customer_id(t),
             }
             for t in tasks
             if str(t.get('id') or '').strip()
         ]
+        task_list.sort(
+            key=lambda task: (
+                1 if not task.get('customer_id') else 0,
+                str(task.get('customer_id') or ''),
+                str(task.get('title') or '').lower(),
+                str(task.get('id') or ''),
+            )
+        )
+        for task in task_list:
+            task.pop('customer_id', None)
         return jsonify({'success': True, 'tasks': task_list})
     except teamleader.TeamleaderError as exc:
         logger.warning('Error al obtener tareas de Teamleader: %s', exc)
