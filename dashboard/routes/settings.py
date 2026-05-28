@@ -634,31 +634,46 @@ def save_task_schedules():
 
     validated: list[dict] = []
     for idx, item in enumerate(body):
-        position = idx + 1
+        user_facing_position = idx + 1
         if not isinstance(item, dict):
-            return jsonify({'success': False, 'error': f'El elemento en posición {position} no es un objeto válido.'}), 400
+            return jsonify(
+                {'success': False, 'error': f'El elemento en posición {user_facing_position} no es un objeto válido.'}
+            ), 400
         task_id = str(item.get('task_id') or '').strip()
         if not task_id:
-            return jsonify({'success': False, 'error': f'El elemento en posición {position} no tiene task_id.'}), 400
+            return jsonify({'success': False, 'error': f'El elemento en posición {user_facing_position} no tiene task_id.'}), 400
         start_time = str(item.get('start_time') or '').strip()
         end_time = str(item.get('end_time') or '').strip()
         if not start_time or not end_time:
             return jsonify(
-                {'success': False, 'error': f'El elemento en posición {position} debe incluir start_time y end_time.'}
+                {
+                    'success': False,
+                    'error': f'El elemento en posición {user_facing_position} debe incluir start_time y end_time.',
+                }
             ), 400
         try:
             parsed_start = time.fromisoformat(start_time)
         except ValueError:
-            return jsonify({'success': False, 'error': f'start_time en posición {position} debe tener formato HH:MM.'}), 400
+            return jsonify(
+                {'success': False, 'error': f'start_time en posición {user_facing_position} debe tener formato HH:MM.'}
+            ), 400
         try:
             parsed_end = time.fromisoformat(end_time)
         except ValueError:
-            return jsonify({'success': False, 'error': f'end_time en posición {position} debe tener formato HH:MM.'}), 400
+            return jsonify(
+                {'success': False, 'error': f'end_time en posición {user_facing_position} debe tener formato HH:MM.'}
+            ), 400
         normalized_start = parsed_start.strftime('%H:%M')
         normalized_end = parsed_end.strftime('%H:%M')
         if parsed_end == parsed_start:
             return jsonify(
-                {'success': False, 'error': f'El elemento en posición {position} no puede tener la misma hora de inicio y fin.'}
+                {
+                    'success': False,
+                    'error': (
+                        f'El elemento en posición {user_facing_position} '
+                        'no puede tener la misma hora de inicio y fin.'
+                    ),
+                }
             ), 400
         start_time = normalized_start
         end_time = normalized_end
