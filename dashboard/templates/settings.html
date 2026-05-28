@@ -565,7 +565,7 @@
       if (!data.success) throw new Error(data.error || 'No se pudieron cargar las tareas.');
       _tlAvailableTasks = Array.isArray(data.tasks) ? data.tasks : [];
       populateTlTaskSelect();
-      window.showToast(`${_tlAvailableTasks.length} tarea(s) cargada(s) para ${customerId}.`);
+      window.showToast(`${_tlAvailableTasks.length} tarea(s) cargada(s).`);
     } catch (err) {
       window.showToast(err.message, true);
     } finally {

@@ -142,26 +142,33 @@ def _teamleader_disabled_response(redirect_on_error: bool = False):
 
 
 def _extract_task_customer_id(task: dict[str, object]) -> str:
+    def _normalize_id(value: object) -> str:
+        if value is None:
+            return ''
+        if isinstance(value, str):
+            return value.strip()
+        return str(value).strip()
+
     if not isinstance(task, dict):
         return ''
-    direct_customer_id = str(task.get('customer_id') or '').strip()
+    direct_customer_id = _normalize_id(task.get('customer_id'))
     if direct_customer_id:
         return direct_customer_id
     customer = task.get('customer')
     if isinstance(customer, dict):
-        customer_id = str(customer.get('id') or '').strip()
+        customer_id = _normalize_id(customer.get('id'))
         if customer_id:
             return customer_id
     company = task.get('company')
     if isinstance(company, dict):
-        company_id = str(company.get('id') or '').strip()
+        company_id = _normalize_id(company.get('id'))
         if company_id:
             return company_id
     project = task.get('project')
     if isinstance(project, dict):
         project_customer = project.get('customer')
         if isinstance(project_customer, dict):
-            project_customer_id = str(project_customer.get('id') or '').strip()
+            project_customer_id = _normalize_id(project_customer.get('id'))
             if project_customer_id:
                 return project_customer_id
     return ''
