@@ -223,7 +223,12 @@
                 <h3 class="h6 mb-1">Tareas programadas</h3>
                 <p class="text-muted small mb-0">Define las tareas de Teamleader para automatizar fichajes siguiendo las normas internas (cada tarea debe tener hora de inicio y fin).</p>
               </div>
-              <button class="btn btn-sm btn-outline-secondary ms-auto" id="loadTlTasksBtn" type="button">
+              <input
+                class="form-control form-control-sm ms-auto"
+                id="tlCustomerId"
+                placeholder="Customer ID"
+              >
+              <button class="btn btn-sm btn-outline-secondary" id="loadTlTasksBtn" type="button">
                 <span id="loadTlTasksSpinner" class="spinner-border spinner-border-sm d-none me-1" role="status"></span>
                 Cargar tareas de Teamleader
               </button>
@@ -286,6 +291,7 @@
     'teamleaderFetchBtn',
     'teamleaderFrom',
     'teamleaderTo',
+    'tlCustomerId',
     'loadTlTasksBtn',
     'addTlTaskBtn',
     'saveTlTaskSchedulesBtn',
@@ -544,15 +550,21 @@
   document.getElementById('loadTlTasksBtn').addEventListener('click', async () => {
     const btn = document.getElementById('loadTlTasksBtn');
     const spinner = document.getElementById('loadTlTasksSpinner');
+    const customerId = document.getElementById('tlCustomerId').value.trim();
+    if (!customerId) {
+      window.showToast('Indica un customer ID para cargar tareas.', true);
+      return;
+    }
     btn.disabled = true;
     spinner.classList.remove('d-none');
     try {
-      const res = await fetch('/api/integrations/teamleader/available-tasks');
+      const params = new URLSearchParams({ customer_id: customerId });
+      const res = await fetch(`/api/integrations/teamleader/available-tasks?${params.toString()}`);
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'No se pudieron cargar las tareas.');
       _tlAvailableTasks = Array.isArray(data.tasks) ? data.tasks : [];
       populateTlTaskSelect();
-      window.showToast(`${_tlAvailableTasks.length} tarea(s) cargada(s) de Teamleader.`);
+      window.showToast(`${_tlAvailableTasks.length} tarea(s) cargada(s).`);
     } catch (err) {
       window.showToast(err.message, true);
     } finally {

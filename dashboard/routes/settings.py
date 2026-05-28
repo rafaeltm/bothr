@@ -141,6 +141,48 @@ def _teamleader_disabled_response(redirect_on_error: bool = False):
     return jsonify({'success': False, 'error': message}), 400
 
 
+def _extract_task_customer_id(task: dict[str, object]) -> str:
+    """Return the best-effort customer ID for a Teamleader task.
+
+    Extraction precedence is:
+    1) ``task.customer_id``
+    2) ``task.customer.id``
+    3) ``task.company.id``
+    4) ``task.project.customer.id``
+    """
+
+    def _normalize_id(value: object) -> str:
+        if value is None:
+            return ''
+        if isinstance(value, str):
+            return value.strip()
+        return str(value).strip()
+
+    if not isinstance(task, dict):
+        return ''
+    direct_customer_id = _normalize_id(task.get('customer_id'))
+    if direct_customer_id:
+        return direct_customer_id
+    customer = task.get('customer')
+    if isinstance(customer, dict):
+        customer_id = _normalize_id(customer.get('id'))
+        if customer_id:
+            return customer_id
+    company = task.get('company')
+    if isinstance(company, dict):
+        company_id = _normalize_id(company.get('id'))
+        if company_id:
+            return company_id
+    project = task.get('project')
+    if isinstance(project, dict):
+        project_customer = project.get('customer')
+        if isinstance(project_customer, dict):
+            project_customer_id = _normalize_id(project_customer.get('id'))
+            if project_customer_id:
+                return project_customer_id
+    return ''
+
+
 @settings_bp.post('/api/integrations/teamleader/connect')
 @auth.login_required
 def teamleader_connect():
@@ -592,19 +634,35 @@ def teamleader_available_tasks():
     disabled_response = _teamleader_disabled_response()
     if disabled_response:
         return disabled_response
+    customer_id = (request.args.get('customer_id') or '').strip()
+    if not customer_id:
+        return jsonify({'success': False, 'error': 'Debes informar customer_id para cargar tareas.'}), 400
+    normalized_customer_id = customer_id.casefold()
     try:
         tasks, refresh_updates = teamleader.list_tasks()
         if refresh_updates:
             _persist_settings_updates(refresh_updates)
-        task_list = [
-            {
-                'id': str(t.get('id') or '').strip(),
-                'title': str(t.get('title') or t.get('summary') or t.get('name') or '').strip(),
-                'type': 'nextgenTask',
-            }
-            for t in tasks
-            if str(t.get('id') or '').strip()
-        ]
+        task_list = []
+        for task in tasks:
+            task_id = str(task.get('id') or '').strip()
+            if not task_id:
+                continue
+            task_customer_id = _extract_task_customer_id(task)
+            if task_customer_id.casefold() != normalized_customer_id:
+                continue
+            task_list.append(
+                {
+                    'id': task_id,
+                    'title': str(task.get('title') or task.get('summary') or task.get('name') or '').strip(),
+                    'type': 'nextgenTask',
+                }
+            )
+        task_list.sort(
+            key=lambda task: (
+                task['title'].lower(),
+                task['id'],
+            )
+        )
         return jsonify({'success': True, 'tasks': task_list})
     except teamleader.TeamleaderError as exc:
         logger.warning('Error al obtener tareas de Teamleader: %s', exc)
